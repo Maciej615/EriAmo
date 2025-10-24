@@ -88,5 +88,4 @@ Model jest agnostyczny co do "pierwszej przyczyny":
 > Styk wymaga $\mathcal{H}_A \cap \mathcal{H}_B \neq \emptyset$.  
 > Warunek ten jest statystycznie zerowy.
 
-### Wykres: Prawdopodobieństwo przecięcia $\mathcal{H}$ 
-chart.png
+### [Wykres: Prawdopodobieństwo przecięcia $\mathcal{H}$] (chart.png)
