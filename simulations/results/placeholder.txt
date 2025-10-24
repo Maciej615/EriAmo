@@ -1,0 +1,2 @@
+Wykres PCA: 1000 cywilizacji
+Plik: pca_2d_plot.png
