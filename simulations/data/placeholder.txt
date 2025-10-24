@@ -1,0 +1,2 @@
+Dane trajektorii 1000 cywilizacji
+Plik: civilizations_1000.npy (NumPy binary)
