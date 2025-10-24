@@ -64,7 +64,7 @@ Jeśli Teoria Strun jest prawdziwa, dostarczyłaby fundamentalnego opisu dla wsz
 * Model z wieloma wektorami $\mathbf{F}$ (np. Ziemia + Słońce + Księżyc) staje się **chaotyczny** (Problem 3 Ciał).
 * Wskazuje to, że nasza "wędrówka" (i nasz "los"), będąca sumą milionów wektorów, jest z natury **złożona i nieprzewidywalna w długim terminie**.
 
-### C. Zastosowania (W40k, Paradoks Fermiego)
+### C. Zastosowania (W40k, Paradoks Fermiego) {case study „metaforycznych symulacji”}
 Model jest na tyle elastyczny, że potrafi opisać systemy fikcyjne (np. "Immaterium" jako Krajobraz $P$ z innymi osiami i wektorami $\mathbf{F}$) oraz wyjaśnić Paradoks Fermiego (kontakt z obcą cywilizacją jako przecięcie się dwóch "historycznie niekompatybilnych" ścieżek $\mathcal{C}$).
 
 ## 4. Model Obliczeniowy (Kod)
