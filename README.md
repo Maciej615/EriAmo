@@ -8,7 +8,7 @@ Jest to model obliczeniowy i filozoficzny próbujący opisać Byt ($S$) nie jako
 **Teza Główna: Byt JEST swoją historią.**
 
 **Przeczytaj pełne wyjaśnienie filozoficzne i wyniki symulacji w moim artykule na Medium:**
-**[Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?](https://link-do-twojego-artykulu-na-medium.com)**
+**[Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?](https://medium.com/@drwisz/filtr-ontologiczny-dlaczego-nie-jesteśmy-sami-ale-nie-możemy-się-spotkać-6d9ef2f2cc8c)**
 
 ---
 
