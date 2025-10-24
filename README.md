@@ -89,3 +89,17 @@ Model jest agnostyczny co do "pierwszej przyczyny":
 > Warunek ten jest statystycznie zerowy.
 
 ### [Wykres: Prawdopodobieństwo przecięcia $\mathcal{H}$](chart.png)
+
+
+---
+
+## PO TYM — REPOZYTORIUM WYGLĄDA TAK:
+
+```markdown
+# Model Kuli Rzeczywistości
+
+Nowość: Filtr Ontologiczny
+
+[Raport naukowy](docs/Filtr_Ontologiczny_Raport.md)  
+[Symulacja](simulations/fermi_1000.py)  
+[Wizualizacja](simulations/results/pca_2d_plot.png)
