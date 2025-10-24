@@ -93,9 +93,6 @@ Model jest agnostyczny co do "pierwszej przyczyny":
 
 ---
 
-## PO TYM — REPOZYTORIUM WYGLĄDA TAK:
-
-```markdown
 # Model Kuli Rzeczywistości
 
 Nowość: Filtr Ontologiczny
