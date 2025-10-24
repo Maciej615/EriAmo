@@ -12,7 +12,7 @@ Jest to model obliczeniowy i filozoficzny próbujący opisać Byt ($S$) nie jako
 
 Poniższy wykres (wygenerowany przez `model_symulacja.py`) pokazuje symulację "wędrówki" Kuli Rzeczywistości ($S$) przez 1000 kroków czasowych w 2-wymiarowym "Krajobrazie Możliwości" ($P$).
 
-![Wizualizacja Trajektorii Kuli Rzeczywistości](kula_trajektoria.png)
+[Wizualizacja Trajektorii Kuli Rzeczywistości](kula_trajektoria.png)
 
 * **Ścieżka $\mathcal{C}$** (linia) reprezentuje unikalną, nieodwracalną "wędrówkę" (historię) Bytu.
 * **$S(t_0)$** (Początek) to stan początkowy.
