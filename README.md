@@ -79,3 +79,13 @@ Powyższa symulacja (`model_symulacja.py`) jest prostą implementacją tego mode
 Model jest agnostyczny co do "pierwszej przyczyny":
 1.  **Tryb Naturalistyczny:** Kula "toczy się sama", napędzana pędem $S(t_0)$ i prawami fizyki (w tym losowością kwantową).
 2.  **Tryb Teistyczny:** Istnieje Nadrzędny Obserwator (Bóg), który jest naturą Krajobrazu $P$. "Iskra twórcza" ($\mathbf{F}_{\text{wola}}$) Kuli może albo walczyć z Krajobrazem (chaos), albo "oddać swój potencjał twórczy" i zestroić się z nim (harmonia).
+   
+## 6. Paradoks Fermiego: Filtr Ontologiczny
+
+> **Teza:**  
+> **Nie jesteśmy sami — jesteśmy *niekompatybilni*.**  
+> Każda cywilizacja to Kula $S$ o unikalnym $\mathcal{H}$.  
+> Styk wymaga $\mathcal{H}_A \cap \mathcal{H}_B \neq \emptyset$.  
+> Warunek ten jest statystycznie zerowy.
+
+### Wykres: Prawdopodobieństwo przecięcia $\mathcal{H}$
