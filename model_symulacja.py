@@ -1,3 +1,8 @@
+# Model Kuli Rzeczywistości (Sphere of Reality Model)
+# Autor: Maciej A. Mazur
+# Licencja: CC BY-SA 4.0
+# Opis: Symulacja 2D wędrówki Kuli Rzeczywistości po Krajobrazie P
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -32,6 +37,6 @@ ax.legend(loc='upper left', fontsize=10)
 ax.grid(True, linestyle='--', alpha=0.7)
 ax.set_xlim(min(x)-3, max(x)+3)
 ax.set_ylim(min(y)-3, max(y)+3)
-
+plt.savefig("kula_rzeczywistosci.png", dpi=300)
 plt.tight_layout()
 plt.show()  # Wyświetl wykres (lub plt.savefig('kula_rzeczywistosci.png') do zapisu)
