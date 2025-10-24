@@ -216,10 +216,6 @@ for civ in cywilizacje:
 
 ---
 
-## PLIKI DO POBRANIA
-
-- [`fermi_1000.py`](attachment://fermi_1000.py) — pełny kod
-- [`wyniki_symulacji.png`](attachment://fermi_pca.png) — wykres PCA
-- [`raport.pdf`](attachment://filtr_ontologiczny.pdf) — raport naukowy (do wygenerowania)
+- [`wyniki_symulacji.png`](Cywilizacje.png) — wykres PCA
 
 ---
