@@ -1,5 +1,5 @@
 # Model Kuli Rzeczywistości ($S$)
-**Autor: [Tutaj wpisz swoje imię, nazwisko lub pseudonim]**
+**Autor: Maciej A. Mazur**
 **Licencja: [CC BY-SA 4.0](LICENSE)**
 
 Jest to model obliczeniowy i filozoficzny próbujący opisać Byt ($S$) nie jako statyczny obiekt, ale jako proces dynamiczny, którego tożsamość jest definiowana przez jego historię.
