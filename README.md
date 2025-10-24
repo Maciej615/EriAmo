@@ -3,14 +3,16 @@
 **Licencja: [CC BY-SA 4.0](LICENSE)**
 # Kula Rzeczywistości (Sphere of Reality Model)
 
-**Przeczytaj pełne wyjaśnienie filozoficzne i wyniki symulacji w moim artykule na Medium:**
-
-**[Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?](https://link-do-twojego-artykulu-na-medium.com)**
-
 Jest to model obliczeniowy i filozoficzny próbujący opisać Byt ($S$) nie jako statyczny obiekt, ale jako proces dynamiczny, którego tożsamość jest definiowana przez jego historię.
 
 **Teza Główna: Byt JEST swoją historią.**
 
+**Przeczytaj pełne wyjaśnienie filozoficzne i wyniki symulacji w moim artykule na Medium:**
+**[Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?](https://link-do-twojego-artykulu-na-medium.com)**
+
+---
+
+Repozytorium zawiera kod i symulacje... (itd.)
 ---
 
 ## Wizualizacja Modelu (Symulacja)
