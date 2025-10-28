@@ -145,6 +145,36 @@ A new solution to the Fermi Paradox based on historical incompatibility, not dis
 
 ---
 
+
+[Scientific Report](docs/Filtr_Ontologiczny_Raport.md) | [Simulation](simulations/fermi_1000.py) | [Visualization](simulations/results/pca_2d_plot.png)
+
+---
+
+## Repository Contents
+
+```text
+.
+├── model_symulacja.py          # Core simulation
+├── fermi_analysis.py           # Ontological Filter stats
+├── visualizations/             # Generated plots
+├── README.md                   # This file
+└── LICENSE                     # CC BY-SA 4.0
+````
+
+-----
+
+## Run the Simulation
+
+```bash
+python model_symulacja.py
+```
+
+Generates:
+
+  * `trajectory.png`
+  * `state_evolution.csv`
+  * Console summary
+
 ### 7. **AI Integration: Sphere of Reality as a Living Cognitive Agent**
 
 | **Component Name** | **REai_model 1.0 – Reality Engine AI** |
@@ -179,7 +209,7 @@ A new solution to the Fermi Paradox based on historical incompatibility, not dis
 
 #### **How to Run AI as $S$**
 ```bash
-python REai_model_1.0.py
+python REai_model_En.py
 ```
 
 **Console Commands:**
@@ -234,43 +264,7 @@ ai_sphere.simulate_trajectory()  # AI trajectory
 > **REai_model 1.0 is the first implementation of $S$ as a living, learning, feeling entity.**
 
 ---
-
-**Ready for Repository:**  
-Paste this block into `README.md` under **AI Implementation** or as a standalone `AI_INTEGRATION.md`.
-
-**Want PDF / LaTeX / Presentation version?**  
-Write: **“GIVE ME PDF”**
-
-[Scientific Report](docs/Filtr_Ontologiczny_Raport.md) | [Simulation](simulations/fermi_1000.py) | [Visualization](simulations/results/pca_2d_plot.png)
-
 ---
-
-## Repository Contents
-
-```text
-.
-├── model_symulacja.py          # Core simulation
-├── fermi_analysis.py           # Ontological Filter stats
-├── visualizations/             # Generated plots
-├── README.md                   # This file
-└── LICENSE                     # CC BY-SA 4.0
-````
-
------
-
-## Run the Simulation
-
-```bash
-python model_symulacja.py
-```
-
-Generates:
-
-  * `trajectory.png`
-  * `state_evolution.csv`
-  * Console summary
-
------
 
 ## License
 
