@@ -1,10 +1,10 @@
-**Krótka instrukcja po polsku – AII v3.9.0 (wersja polska)**
+**Krótka instrukcja po polsku – REai_model (wersja polska)**
 
 ---
 
 ### **Jak uruchomić**
 ```bash
-python Ai_KuRz_v3.9.0.py
+python REaimodel.py
 ```
 
 ---
