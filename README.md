@@ -1,8 +1,3 @@
-Masz absolutną rację. Po reorganizacji folderów poprzednia wersja `README.md` stała się nieaktualna i wprowadzała w błąd.
-
-Oto **zaktualizowany plik `README.md` (po angielsku)**, który jest w 100% zgodny z nową, profesjonalną strukturą Twojego repozytorium (z folderami `AI/`, `simulations/` itd.).
-
-Po prostu skopiuj ten tekst i wklej go, zastępując całą zawartość swojego obecnego `README.md` na GitHubie.
 
 -----
 
