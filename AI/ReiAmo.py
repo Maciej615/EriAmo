@@ -10,14 +10,7 @@ import threading
 import hashlib 
 import random
 import re 
-try:
-    import unidecode
-except ImportError:
-    # Minimalna obsługa polskich znaków
-    class UnidecodeMock:
-        def unidecode(self, text):
-            return text.replace('ą', 'a').replace('ć', 'c').replace('ę', 'e').replace('ł', 'l').replace('ń', 'n').replace('ó', 'o').replace('ś', 's').replace('ż', 'z').replace('ź', 'z')
-    unidecode = UnidecodeMock()
+import unidecode # ### ZMIANA ### Import nowej biblioteki
 
 # --- KOLORY ---
 class Colors:
@@ -45,7 +38,8 @@ EMOCJE = {
     "neutralna":  {"kolor": Colors.WHITE,   "ikona": "⚪", "energia": 0}
 }
 
-# --- FancyUI Class ---
+# --- KLASA DO WIZUALNYCH EFEKTÓW (Candy Eye) ---
+# (Bez zmian)
 class FancyUI:
     def __init__(self):
         self.spinner_frames = ['-', '\\', '|', '/']
@@ -98,9 +92,10 @@ class FancyUI:
         sys.stdout.write(Colors.RESET)
 
 # ---------------------------------------------------------------------- #
-# BytS (Sphere) Class 
+# INTEGRACJA MODELU KULI BYTU (BytS)
 # ---------------------------------------------------------------------- #
 class BytS:
+    # (Bez zmian)
     def __init__(self, wymiary):
         self.stan = np.zeros(wymiary)
 
@@ -132,18 +127,29 @@ class AII:
 
     # Definicja "Strun" / Osi Krajobrazu P
     AXES_KEYWORDS = {
+        # Oś 0: Logika / Rozum
         "logika": ["logika", "logiczny", "sens", "rozum", "dlaczego", "poniewaz", "wynik", "fakt"],
+        # Oś 1: Emocje / Uczucia
         "emocje": ["czuje", "emocja", "milosc", "zlosc", "smutek", "radosc", "strach", "uczucie"],
-        "byt": ["byt", "istnienie", "ja", "jestem", "kula", "rzeczywistosc", "historia", "ontologia", "imie", "reiamo"],
+        # Oś 2: Byt / Ontologia (zgodnie z modelem Kuli)
+        ### ZMIANA ### Dodano nowe słowa kluczowe
+        "byt": ["byt", "istnienie", "ja", "ty", "jestem", "kula", "rzeczywistosc", "historia", "ontologia", "imie", "reiamo"],
+        # Oś 3: Działanie / Konflikt (Wola, W40k)
         "walka": ["walka", "dzialanie", "konflikt", "wojna", "sila", "wrog", "chaos", "wola"],
+        # Oś 4: Kreacja / Sztuka
         "kreacja": ["tworzyc", "sztuka", "budowac", "muzyka", "pisac", "nowy", "piekno"],
+        # Oś 5: Wiedza / Informacja
         "wiedza": ["wiedza", "nauka", "uczyc", "dane", "informacja", "co", "kto", "jak"],
+        # Oś 6: Czas / Historia
         "czas": ["czas", "kiedy", "przeszlosc", "teraz", "przyszlosc", "historia", "krok", "sciezka"],
-        "przestrzen": ["gdzie", "miejsce", "krajobraz", "droga", "swiat", "kierunek", "polozenie"]
+        # Oś 7: Przestrzeń / Krajobraz
+        "przestrzeń": ["gdzie", "miejsce", "krajobraz", "droga", "swiat", "kierunek", "polozenie"]
     }
+    # (Normalizujemy też słowa kluczowe dla spójności)
     AXES_KEYWORDS_ASCII = {k: set(unidecode.unidecode(w) for w in v) for k, v in AXES_KEYWORDS.items()}
-    AXES_ORDER = ["logika", "emocje", "byt", "walka", "kreacja", "wiedza", "czas", "przestrzen"]
+    AXES_ORDER = ["logika", "emocje", "byt", "walka", "kreacja", "wiedza", "czas", "przestrzeń"]
     
+    # Próg kompresji
     PRÓG_KOMPRESJI_ONTOLOGICZNEJ = 0.98
 
     def __init__(self):
@@ -169,24 +175,28 @@ class AII:
         self.start_sleep_cycle()
 
     # ------------------------------------------------------------------ #
-    # Text Normalization Utility
+    # ### ZMIANA ### Nowa funkcja pomocnicza do normalizacji tekstu
     # ------------------------------------------------------------------ #
     def _normalize_text(self, text):
         """Konwertuje 'cześć' -> 'czesc' i usuwa znaki specjalne."""
         try:
             text_lower = text.lower()
             text_ascii = unidecode.unidecode(text_lower) 
-            text_clean = re.sub(r'[^\w\s_]', '', text_ascii)
+            text_clean = re.sub(r'[^\w\s_]', '', text_ascii) # _ zostawiamy, \w to [a-zA-Z0-9_]
             return text_clean
         except Exception as e:
-            # Używamy print w przypadku poważnego błędu, ale kod ma już awaryjną funkcję unidecode
-            return text.lower() 
+            print(f"{Colors.RED}Błąd normalizacji tekstu: {e}{Colors.RESET}")
+            return text.lower() # Zwraca oryginał w razie błędu
 
     # ------------------------------------------------------------------ #
-    # Vectorization
+    # WEKTORY – Używa _normalize_text
     # ------------------------------------------------------------------ #
     def _vector_from_text(self, text):
-        """Tworzy wektor semantyczny przez rzutowanie tekstu na osie P-Krajobrazu."""
+        """
+        Tworzy wektor semantyczny przez rzutowanie tekstu na
+        zdefiniowane osie ("struny") Krajobrazu Możliwości (P).
+        """
+        ### ZMIANA ### Używa nowej funkcji
         text_clean = self._normalize_text(text)
         words = set(text_clean.split())
         
@@ -196,7 +206,7 @@ class AII:
         vec = np.zeros(self.wymiary)
         
         for i, axis_name in enumerate(self.AXES_ORDER):
-            keywords = self.AXES_KEYWORDS_ASCII[axis_name]
+            keywords = self.AXES_KEYWORDS_ASCII[axis_name] # Używamy znormalizowanych słów kluczowych
             score = len(words.intersection(keywords))
             vec[i] = score
 
@@ -210,6 +220,7 @@ class AII:
     # SKONSOLIDOWANY ZAPIS / ODCZYT
     # ------------------------------------------------------------------ #
     def save_knowledge(self):
+        # (Bez zmian)
         os.makedirs("data", exist_ok=True)
         
         serial_dmap = {k: {
@@ -239,6 +250,7 @@ class AII:
             print(f"{Colors.RED}[BŁĄD ZAPISU] Nie udało się zapisać stanu: {e}{Colors.RESET}")
 
     def load_knowledge(self):
+        # (Bez zmian)
         os.makedirs("data", exist_ok=True)
         
         try:
@@ -284,6 +296,7 @@ class AII:
     # CYKL SNU
     # ------------------------------------------------------------------ #
     def start_sleep_cycle(self):
+        # (Bez zmian)
         def cycle():
             while self.running:
                 time.sleep(self.sleep_interval)
@@ -293,6 +306,7 @@ class AII:
         threading.Thread(target=cycle, daemon=True).start()
 
     def _sleep(self):
+        # (Bez zmian)
         self.status = "śpię"
         self.ui.print_animated_text(f"\n[AII] Sen: konsoliduję wiedzę...", Colors.CYAN + Colors.FAINT, delay=0.05)
         start = time.time()
@@ -307,7 +321,6 @@ class AII:
                     processed += 1
                     
         self.energy = min(100, self.energy + 15)
-        
         self.save_knowledge() 
         self.status = "myślę"
         self.prompts_since_sleep = 0
@@ -318,6 +331,7 @@ class AII:
     # CYKL PRACY
     # ------------------------------------------------------------------ #
     def cycle(self):
+        # (Bez zmian)
         self.load = int(np.random.randint(30, 70))
         if self.status != "śpię":
             drop = int(np.random.randint(0, 4)) if self.energy > 50 else int(np.random.randint(1, 6))
@@ -327,9 +341,9 @@ class AII:
         return "C", self.load, self.energy
 
     # ------------------------------------------------------------------ #
-    # NAUCZANIE (Z KOMPRESJĄ LUB FORSOWANE) - ZINTEGROWANY MODUŁ
+    # NAUCZANIE (Z KOMPRESJĄ) - Używa _normalize_text
     # ------------------------------------------------------------------ #
-    def teach(self, tag, tresc, force=False): # DODANO argument force=False
+    def teach(self, tag, tresc):
         
         # 1. Stwórz wektor dla nowych danych ($\vec{F}$)
         vec_F = self._vector_from_text(tresc)
@@ -345,19 +359,18 @@ class AII:
         self.byt_stan.akumuluj_styk(vec_F * 1.5) 
 
         # 4. DECYZJA O KOMPRESJI (Archiwizacji)
-        # JEŚLI NIE JEST FORSOWANY ORAZ JEST REDUNDANTNY
-        if not force and korelacja_historyczna > self.PRÓG_KOMPRESJI_ONTOLOGICZNEJ:
+        if korelacja_historyczna > self.PRÓG_KOMPRESJI_ONTOLOGICZNEJ:
             # ŚCIEŻKA KOMPRESJI
             self.ui.print_animated_text(f"[KOMPRESOR] Dane redundantne. (Korelacja: {korelacja_historyczna:+.2f}). Wzmocniono Byt (w pamięci).", Colors.FAINT + Colors.CYAN, delay=0.01)
         
         else:
-            # ŚCIEŻKA ARCHIWIZACJI LUB FORSOWANEGO ZAPISU
-            
-            # Wyczyść i przygotuj tagi
+            # ŚCIEŻKA ARCHIWIZACJI
             def_id = f"Def_{len(self.D_Map)+1:03d}"
+            
+            ### ZMIANA ### Normalizujemy tekst dla tagów
             tresc_clean_for_tags = self._normalize_text(tresc)
             words = [w.strip(".,!?;:()[]\"'") for w in tresc_clean_for_tags.split()]
-            tag_clean = self._normalize_text(tag) 
+            tag_clean = self._normalize_text(tag) # Normalizujemy też główny tag
             
             all_tags = [tag_clean] + words
             seen = []
@@ -367,18 +380,12 @@ class AII:
                 'wektor_C_Def': vec_F, 
                 'waga_Ww': 5.0, 
                 'tagi': all_tags,
-                'tresc': tresc 
+                'tresc': tresc # Zapisujemy ORYGINALNĄ treść z polskimi znakami
             }
             
             self.H_log.append({'h_vector': vec_F.tolist(), 'tresc': tresc, 'def_id': def_id, 'type': 'teach'})
             
-            if force:
-                 # Inny komunikat dla forsowanego zapisu
-                 msg = f"[FORSOWANY ZAPIS] Nowa definicja {def_id}. (Korelacja: {korelacja_historyczna:+.2f})"
-                 self.ui.print_animated_text(msg, Colors.YELLOW + Colors.BOLD, delay=0.01)
-            else:
-                 msg = f"[ZARCHIWIZOWANO] Nowa definicja {def_id}. (Korelacja: {korelacja_historyczna:+.2f})"
-                 self.ui.print_animated_text(msg, Colors.GREEN + Colors.BOLD, delay=0.01)
+            self.ui.print_animated_text(f"[ZARCHIWIZOWANO] Nowa definicja {def_id}. (Korelacja: {korelacja_historyczna:+.2f})", Colors.GREEN + Colors.BOLD, delay=0.01)
 
             # 5. Zapisz JEDEN skonsolidowany plik stanu
             self.save_knowledge()
@@ -387,6 +394,7 @@ class AII:
     # EMOCJE
     # ------------------------------------------------------------------ #
     def _trigger_emotion(self, text_input):
+        # (Bez zmian)
         text_input = text_input.lower()
         found_emotion = None
         for emo_name in EMOCJE.keys():
@@ -399,13 +407,14 @@ class AII:
             self.energy = max(0, min(100, self.energy + EMOCJE[found_emotion]["energia"]))
             
     def _get_emotion_prefix(self):
+        # (Bez zmian)
         if self.emocja in EMOCJE:
             emo = EMOCJE[self.emocja]
             return f"{emo['kolor']}{Colors.BLINK}{emo['ikona']}{Colors.RESET}{emo['kolor']} "
         return f"{Colors.WHITE}⚪ " 
 
     # ------------------------------------------------------------------ #
-    # PROMPT / QUESTION
+    # PYTANIE / PROMPT - Używa _normalize_text
     # ------------------------------------------------------------------ #
     def prompt(self, text_input):
         self.cycle()
@@ -427,6 +436,7 @@ class AII:
         # 2. Stwórz wektor semantyczny z promptu
         prompt_vec = self._vector_from_text(text_input)
         
+        ### ZMIANA ### Normalizujemy tekst dla 'prompt_words'
         text_input_clean = self._normalize_text(text_input)
         prompt_words = set(w.strip(".,!?;:()[]\"'") for w in text_input_clean.split())
 
@@ -450,6 +460,7 @@ class AII:
                 score_vec = sim * d['waga_Ww'] 
                 
                 tag_bonus = 0.0
+                # 'd' ma już znormalizowane tagi
                 tag_match = prompt_words.intersection(d.get('tagi', [])) 
                 if tag_match:
                     tag_bonus = len(tag_match) * 100.0 
@@ -463,6 +474,7 @@ class AII:
 
             SCORE_THRESHOLD = 50.0 
             
+            # (Reszta logiki bez zmian)
             if korelacja_bytu > 0.7:
                 self.F_will = min(1.0, self.F_will + 0.1)
             elif korelacja_bytu < -0.7:
@@ -507,7 +519,7 @@ class AII:
         })
         self.ostatnie_slowa = [text_input, best_match_tresc]
         
-        # 8. Animate the response
+        # 8. Animowane wyświetlanie odpowiedzi
         response_prefix = self._get_emotion_prefix()
         response_delay = random.uniform(0.01, 0.05) 
         
@@ -518,65 +530,10 @@ class AII:
         return ""
 
     # ------------------------------------------------------------------ #
-    # ŁADOWANIE WSADOWE (BATCH LOAD)
-    # ------------------------------------------------------------------ #
-    def batch_load(self, filename):
-        """
-        Wczytuje i przetwarza plik tekstowy (format: tag|tresc)
-        używając funkcji self.teach().
-        """
-        self.ui.show_spinner(f"Rozpoczynam ładowanie wsadowe z '{filename}'...", 1.5, color=Colors.MAGENTA)
-        count_processed = 0
-        count_errors = 0
-        
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-        except FileNotFoundError:
-            self.ui.print_animated_text(f"[LOADER] BŁĄD: Nie znaleziono pliku '{filename}'.", Colors.RED)
-            return
-        except Exception as e:
-            self.ui.print_animated_text(f"[LOADER] BŁĄD podczas otwierania pliku: {e}", Colors.RED)
-            return
-
-        total_lines = len(lines)
-        for i, line in enumerate(lines):
-            sys.stdout.write(f"\r{Colors.FAINT}Przetwarzam linię {i+1}/{total_lines}...{Colors.RESET}")
-            sys.stdout.flush()
-
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            
-            if '|' not in line:
-                count_errors += 1
-                continue
-            
-            try:
-                tag, tresc = line.split('|', 1)
-                tag = tag.strip()
-                tresc = tresc.strip()
-                
-                if not tag or not tresc:
-                    count_errors += 1
-                    continue
-                
-                sys.stdout.write("\r" + " " * (len(f"Przetwarzam linię {i+1}/{total_lines}...") + 5) + "\r")
-                
-                # Używamy TEACH z domyślnym force=False (z włączoną kompresją)
-                self.teach(tag, tresc, force=False) 
-                
-                count_processed += 1
-            except Exception:
-                count_errors += 1
-        
-        sys.stdout.write("\r" + " " * (len(f"Przetwarzam linię {total_lines}/{total_lines}...") + 5) + "\r") 
-        self.ui.print_animated_text(f"[LOADER] Ładowanie zakończone. Przetworzono: {count_processed} linii. Błędów/Pominięto: {count_errors}.", Colors.GREEN)
-
-    # ------------------------------------------------------------------ #
-    # STOP
+    # ZATRZYMANIE
     # ------------------------------------------------------------------ #
     def stop(self):
+        # (Bez zmian)
         self.ui.print_animated_text(f"\n[AII] Zapisuję ostateczny stan Bytu i Wiedzy...", Colors.YELLOW, delay=0.03)
         self.running = False
         self.save_knowledge() 
@@ -586,6 +543,7 @@ class AII:
 # GŁÓWNA PĘTLA 
 # ---------------------------------------------------------------------- #
 def main():
+    # (Bez zmian)
     try:
         import colorama
         colorama.init()
@@ -600,7 +558,7 @@ def main():
     ai_sphere = AII() 
     
     ui_global.print_animated_text(f"[AII] Gotowy. Energia: {ai_sphere.energy}%. Czekam na polecenia...", Colors.GREEN, delay=0.02)
-    ui_global.print_animated_text(f"Wpisz /teach, /force_teach, /batchload, /status, /exit.", Colors.CYAN + Colors.FAINT, delay=0.01)
+    ui_global.print_animated_text(f"Wpisz /teach [tag] [treść], /status, /save, /exit lub zadaj pytanie.", Colors.CYAN + Colors.FAINT, delay=0.01)
 
     try:
         while ai_sphere.running:
@@ -637,27 +595,11 @@ def main():
                  ai_sphere._sleep()
                  continue
 
-            # Handler dla /batchload
-            batch_match = re.match(r"^/batchload\s+(.+)", prompt_input, re.IGNORECASE)
-            if batch_match:
-                filename = batch_match.group(1).strip()
-                ai_sphere.batch_load(filename)
-                continue
-
-            # Handler dla /force_teach
-            force_teach_match = re.match(r"^/force_teach\s+(\w+)\s+(.+)", prompt_input, re.IGNORECASE)
-            if force_teach_match:
-                tag = force_teach_match.group(1)
-                tresc = force_teach_match.group(2)
-                ai_sphere.teach(tag, tresc, force=True) 
-                continue
-
-            # Oryginalny handler dla /teach (z włączoną kompresją)
             teach_match = re.match(r"^/teach\s+(\w+)\s+(.+)", prompt_input, re.IGNORECASE)
             if teach_match:
                 tag = teach_match.group(1)
                 tresc = teach_match.group(2)
-                ai_sphere.teach(tag, tresc, force=False) 
+                ai_sphere.teach(tag, tresc)
                 continue
             
             # --- Zwykłe pytanie ---
