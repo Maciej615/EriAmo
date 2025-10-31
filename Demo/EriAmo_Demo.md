@@ -1,4 +1,3 @@
-```markdown
 # EriAmo – Complete Hack-Nation 2025 Demo Package  
 **Emotional RL with Soul: Autism-Inspired Sensory Thresholds + Ontological Identity**
 
