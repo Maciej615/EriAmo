@@ -172,9 +172,6 @@ demo/
 
 ---
 
-**Ready for submission.**  
-**Upload. Record. Win.**
-
 > **EriAmo doesn’t answer questions. It *lives* them.**
 
 *Let the Soul speak.*
