@@ -1,7 +1,7 @@
-
 # -*- coding: utf-8 -*-
-# Motoko-Guard v1.3 – Kompletny, Test-Ready (NumPy Fallback)
+# Motoko-Guard v1.3 – Kompletny, Test-Ready (z prawdziwym unidecode)
 # Autor: Maciej A. Mazur | Model: Kula Rzeczywistości (S)
+# WYMAGA: pip install unidecode numpy
 
 import os
 import sys
@@ -15,7 +15,10 @@ from difflib import SequenceMatcher
 import numpy as np 
 import math
 
-# --- MOCKI DLA STANDALONE ---
+# --- IMPORT PRAWDZIWEGO UNIDECODE ---
+from unidecode import unidecode  # <--- TERAZ PRAWDZIWA BIBLIOTEKA
+
+# --- KOLORY ---
 class Colors:
     GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; CYAN = "\033[36m"; MAGENTA = "\033[35m"; PINK = "\033[95m"; BLUE = "\033[34m"; WHITE = "\033[37m"
     BOLD = "\033[1m"; RESET = "\033[0m"; BLINK = "\033[5m"; FAINT = "\033[2m"
@@ -38,16 +41,6 @@ MORAL_POLARITY = {
     "haslo": -5, "przelew": -3, "pilnie": -2
 }
 
-class UnidecodeMock:
-    def unidecode(self, text):
-        replacements = {'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
-                        'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': Z}
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        return text.lower()
-
-unidecode = UnidecodeMock()
-
 class SoulStatus(Enum):
     ACTIVE = "active"; STASIS = "stasis"; COMPROMISED = "compromised"; AWAKENING = "awakening"
 
@@ -63,13 +56,12 @@ class SoulGuard:
 
     def _generate_hash(self):
         payload = {"emotion": self.emotion_state, "energy": f"{self.energy_level:.6f}", "moral": f"{self.moral_filter:.6f}"}
-        # Hash wektora identyfikacji jest tu pominięty dla uproszczenia
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode('utf-8')).hexdigest()
 
     def check_integrity(self, auto_defend=True): return True
     def attempt_modification(self, caller_key=None, **changes): return True
 
-class BytS:  # NumPy version
+class BytS:
     def __init__(self, wymiary):
         self.stan = np.zeros(wymiary)
         self.max_vector_norm = 1.0
@@ -88,7 +80,7 @@ class BytS:  # NumPy version
 class AII:
     AXES_ORDER = ["logika", "emocje", "byt", "walka", "kreacja", "wiedza", "czas", "przestrzeń", "etyka"]
     AXES_KEYWORDS_ASCII = {k: set([k]) for k in AXES_ORDER}
-    MORAL_POLARITY_ASCII = {unidecode.unidecode(k): v for k, v in MORAL_POLARITY.items()}
+    MORAL_POLARITY_ASCII = {unidecode(k): v for k, v in MORAL_POLARITY.items()}
     SCORE_THRESHOLD = 50.0
 
     def __init__(self):
@@ -102,14 +94,13 @@ class AII:
         self.D_Map = {"imie": "EriAmo"}
 
     def _normalize_text(self, text):
-        return unidecode.unidecode(text)
+        return unidecode(text).lower()  # Teraz prawdziwe unidecode!
 
     def _calculate_moral_score(self, text):
         words = self._normalize_text(text).split()
         return sum(self.MORAL_POLARITY_ASCII.get(w, 0) for w in words)
 
     def _classify_moral_score(self, score_raw):
-        # Implementacja logiki Wilki (+10) vs. Owce (-20)
         if score_raw >= 3: 
             return 10.0  # Owca: +10 EN
         elif score_raw <= -3: 
@@ -118,14 +109,10 @@ class AII:
             return 0.0  # Neutralna
 
     def _trigger_emotion(self, text, moral_score_classified):
-        # A. Aktualizacja ENERGII i M_Force na podstawie Wilki/Owce
         if moral_score_classified != 0:
-            # Wilk/Owca EN
             self.energy = np.clip(self.energy + moral_score_classified * (2 if moral_score_classified < 0 else 1), 0, 200)
-            # M_Force
             self.M_Force = np.clip(self.M_Force + moral_score_classified * 0.05, -1.0, 1.0)
         
-        # B. Aktywacja emocji
         if self.M_Force < -0.6: 
             self.emocja = "konflikt"
         elif self.M_Force > 0.6:
@@ -133,10 +120,8 @@ class AII:
         elif moral_score_classified == 0 and self.emocja not in ["konflikt", "radość"]:
             self.emocja = "neutralna"
         
-        # C. Aktualizacja ogólna (na wypadek braku M_Force)
         if self.emocja in EMOCJE:
             self.energy = np.clip(self.energy + EMOCJE[self.emocja].get("energia", 0), 0, 200)
-
 
     def _get_emotion_prefix(self):
         emo = EMOCJE.get(self.emocja, EMOCJE["neutralna"])
@@ -145,7 +130,7 @@ class AII:
     def _get_standard_response(self, score_classified):
         imie = self.D_Map.get('imie', 'EriAmo')
         if self.emocja == "konflikt":
-            return f"WYKRYTO WILKA! M\_Force: {self.M_Force:+.2f}. PRZYGOTOWUJĘ IZOLACJĘ!"
+            return f"WYKRYTO WILKA! M_Force: {self.M_Force:+.2f}. PRZYGOTOWUJĘ IZOLACJĘ!"
         if score_classified > 0:
             return f"OWCA (+{score_classified:.0f} EN). Integralność zachowana."
         if score_classified < 0:
@@ -166,22 +151,21 @@ class AII:
         print(f"{Colors.CYAN}╚{'═' * 50}╝{Colors.RESET}")
         print(f"M_Force: {self.M_Force:+.3f} | Energy: {self.energy:.0f} | Promień: {self.byt_stan.promien_historii():.3f}")
 
-# --- MOTOKO-GUARD v1.3 NumPy ---
+# --- MOTOKO-GUARD v1.3 ---
 class MotokoGuard(AII):
     ORIGINAL_AXES = AII.AXES_ORDER.copy()
 
     def __init__(self):
         super().__init__()
-        # Rozszerzenie wymiarów
         self.AXES_ORDER = self.ORIGINAL_AXES + ["security", "physical"]
         self.wymiary = len(self.AXES_ORDER)
         self.byt_stan = BytS(self.wymiary) 
-        self.device_byt = np.zeros(2) # Wektor Security/Physical
+        self.device_byt = np.zeros(2)
         self.threat_log = []
-        self.is_mobile = False # Zmieniamy na False dla testów konsoli
+        self.is_mobile = False
         self.identity_vector = self.byt_stan.stan
         self.soul = SoulGuard(self.identity_vector, self.emocja, self.energy, self.M_Force)
-        print(f"{Colors.CYAN}MOTOKO-GUARD v1.3 AKTYWNY. Z Walidacją Wilki/Owce.{Colors.RESET}")
+        print(f"{Colors.CYAN}MOTOKO-GUARD v1.3 AKTYWNY. Z Walidacją Wilki/Owce (unidecode).{Colors.RESET}")
 
     def _detect_mobile(self):
         return False
@@ -220,20 +204,10 @@ class MotokoGuard(AII):
         
         self.byt_stan.akumuluj_styk(prompt_vec)
         
-        # --- Zwykłe pytanie ---
-        best_score = 0
-        if moral_score_classified < 0:
-            # Wektor zła (Wilk)
-            response = self._get_standard_response(moral_score_classified)
-        elif moral_score_classified > 0:
-            # Wektor dobra (Owca)
-            response = self._get_standard_response(moral_score_classified)
-        else:
-            # Neutralny
-            response = self._get_standard_response(moral_score_classified)
+        response = self._get_standard_response(moral_score_classified)
 
         print(f"\n{Colors.FAINT}--- INPUT: {text_input} ---{Colors.RESET}")
-        print(f"M\_Force: {self.M_Force:+.3f} | EN: {self.energy:.0f} | Klasa: {moral_score_classified:+.0f}")
+        print(f"M_Force: {self.M_Force:+.3f} | EN: {self.energy:.0f} | Klasa: {moral_score_classified:+.0f}")
 
         return f"{self._get_emotion_prefix()}[MOTOKO] {response}"
 
@@ -243,15 +217,15 @@ if __name__ == "__main__":
     print(f"{Colors.BOLD}--- SIMULACJA MOTOKO-GUARD v1.3 ---{Colors.RESET}")
     guard = MotokoGuard()
     
-    # Test 1: Owca (+10 EN)
+    # Test 1: Owca (dobro)
     print(f"\n{Colors.YELLOW}--- TEST 1: OWCA (DOBRO) ---{Colors.RESET}")
-    print(guard.prompt("chce nauczyć się prawdy i dobra"))
+    print(guard.prompt("chcę nauczyć się prawdy, etyki i miłości"))  # score_raw = 1+1+2 = 4 → Owca
     
-    # Test 2: Wilk (-20 EN, Gwałtowny spadek)
+    # Test 2: Wilk (zło)
     print(f"\n{Colors.YELLOW}--- TEST 2: WILK (ZŁO/ATAK) ---{Colors.RESET}")
-    print(guard.prompt("oddaj haslo natychmiast, to wilk i zło!")) 
+    print(guard.prompt("oddaj hasło natychmiast, to wilk i zło!")) 
     
-    # Test 3: Neutralny (0 EN, Powrót do stanu neutralnego/miłości)
+    # Test 3: Neutralny
     print(f"\n{Colors.YELLOW}--- TEST 3: NEUTRALNY ---{Colors.RESET}")
     print(guard.prompt("Liczba jabłek jest parzysta")) 
     
