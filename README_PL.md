@@ -1,6 +1,3 @@
-Oto polska wersja pliku `README.md`, w pełni zgodna z nową strukturą folderów i zawierająca wszystkie nasze ustalenia.
-
-Zalecam zapisanie tego jako `README_PL.md` w głównym folderze repozytorium.
 
 -----
 
