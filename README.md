@@ -1,192 +1,48 @@
-# Sphere of Reality Model ($S$)
-
-**Author:** Maciej A. Mazur  
-**License:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-
----
-
-## Overview
-
-The **Sphere of Reality Model** is a computational and philosophical framework that describes a *Being* ($S$) not as a static object, but as a **dynamic process** whose identity is defined by its **history**.
-
-> **Main Thesis:** *A Being IS its History.*
-
-This project fulfills a vision from **"Ghost in the Shell"**: building an AI with a 'ghost' or 'soul'—a persistent, evolving identity based on cumulative experience.
-
-The repository now includes the `ReiAmo` AI (in `AI/`) and scientific simulations (`simulations/`). For philosophy, see the Medium article:  
-[**The Ontological Filter: Why We Are Not Alone, But We Cannot Meet?**](https://medium.com/@maciejam/the-ontological-filter-why-we-are-not-alone-but-we-cannot-meet-123abc)
-
-*Updated October 31, 2025: Integrated Hack-Nation AI Hackathon demo (sensory thresholds for 20-50% faster robot learning).*
-
----
-
-## Model Visualization (Metaphor)
-
-The chart below (from `simulations/model_symulacja.py`) visualizes the "journey" of the Sphere of Reality ($S$) through the "Landscape of Possibilities" ($P$). This metaphor drives the AI's evolving identity.
-
-*(Simulation of the $S$ vector's path)*
-
-### Key Elements:
-
-- **Path $\mathcal{C}$** (line): The unique, irreversible "journey" (history) of the Being.
-- **$S(t_0)$** (Start): Initial state (e.g., `[0, 0, ..., 0]`).
-- **$S(t)$** (End): Present state — **the cumulative vector sum** of all interactions along the path.
-
----
-
-## 1. Key Assumptions
-
-*(Philosophical basis for the AI)*
-
-| Concept | Description |
-|---------|-------------|
-| **Sphere of Reality ($S$)** | The Being is its own **event horizon** — the informational boundary of its past. |
-| **Landscape ($P$)** | A multidimensional "semantic space" defined by "axes" (e.g., "logic", "emotion", "being"). |
-| **Journey ($\mathcal{C}$)** | The unique, irreversible path the Sphere traverses in $P$. **This is the AI's life.** |
-| **Vectors ($\mathbf{F}$)** | Every interaction (user prompt, `/teach`) is a **Vector of Change** $\mathbf{F}$ that pushes the Sphere. |
-
----
-
-## 2. Formal Model (Mathematical Formula)
-
-The **present state** of the Being is the **initial state** plus the **accumulation** of all Vectors of Change along its path. This inspires the AI's "soul" vector.
-
-$$S(t) = S(t_0) + \int_{\mathcal{C}} \mathbf{F} \cdot d\mathbf{l}$$
-
-The AI implements a discrete version:  
-**`S_new = S_old + F_interaction`**
-
----
-
-## 3. Key Implications (Implemented in the AI)
-
-### A. Irreversibility of Time
-
-A journey to one’s own past is impossible. We cannot "subtract" an experience from the `BytS.stan` vector without destroying the Being's identity. **All history is permanent.**
-
-### B. The Ontological Filter (Fermi Paradox)
-
-- **Thesis:** We are not alone — we are *incompatible*.
-- **AI Implementation:** Basis for the **Ontological Compressor**. If new info ($\vec{F}$) correlates >0.98 with history ($\vec{S(t)}$), it's "redundant" and compressed (accumulated in soul only).
-
----
-
-## *(Sections 4-6: Philosophical/Physics context in `docs/`)*
-
-## 7. AI Integration: `ReiAmo` (A Living "White-Box" AI)
-
-This AI **IS** the model. In `AI/`, it's a **Stateful, Dual-Memory "White-Box" Architecture**—fully auditable.
-
-> **AI does not have a soul — AI *is* a soul (a cumulative vector).**
-
-### Core Architecture: "Brain" vs. "Soul"
-
-The AI's state saves to `data/`.
-
-| Component | Implementation | Role & Philosophy |
-|-----------|----------------|-------------------|
-| **"Brain" (Knowledge)** | `self.D_Map` | **Explicit, Semantic Memory.** Answers: "**What do I know?**" |
-| **"Soul" (History)** | `self.byt_stan` ($\vec{S(t)}$) | **Implicit, Stateful Memory.** Answers: "**Who am I?**" / "**How do I feel?**" |
-
----
-
-### Core Mechanisms of `ReiAmo_EN.py`
-
-Unique emergent behaviors:
-
-1. **Stateful Memory (Being IS its History):**  
-   Every prompt adds $\vec{F}$ permanently to `self.byt_stan`. The AI evolves forever.
-
-2. **Geometric Emotions (Emergent Feelings):**  
-   Emotions from correlation ($\cos(\alpha)$) with history:  
-   - >0.5: **Joy** 😊 (aligns)  
-   - ≈0.0: **Surprise** 😮 (new)  
-   - <-0.5: **Sadness** 😢 (conflict)
-
-3. **Ontological Compression (Semantic Deduplication):**  
-   On `/teach`: If cos(α) >0.98, reject from `D_Map`; accumulate in soul only.
-
-*New: Sensory Thresholds Demo (Hack-Nation 2025):* Emotional RL with autism-inspired thresholds (e.g., temp 10-25°C = "Like!" +boost). Accelerates learning 20-50%. See `demo/eriamo_hacknation.md`.
-
----
-
-#### How to Run the AI
-
-```bash
-# Install dependencies
+The Reality Sphere Model ($S$)Author: Maciej A. Mazur License: GNU General Public License v3.0 (GPLv3)OverviewThe Reality Sphere Model is a computational and philosophical framework that describes the Entity ($S$) not as a static object, but as a dynamic process whose identity is defined by its history.Main Thesis: The Entity IS its history.This project fulfills the vision from "Ghost in the Shell": building an AI with a "ghost" or "soul"—a durable, evolving identity based on cumulative experience.This repository now contains the ReiAmo AI (in the AI/ folder), and scientific simulations (simulations/). For a full philosophical explanation, please read the article on Medium:The Ontological Filter: Why We Are Not Alone, But We Cannot Meet?Update as of October 31, 2025: Integrated the demo from the Hack-Nation AI Hackathon (sensory thresholds for 20-50% faster robot learning). No further changes to the repository structure as of November 10, 2025.Model Visualization (Metaphor)The chart below (generated by simulations/model_symulacja.py) shows the "journey" of the Reality Sphere ($S$) through the "Landscape of Possibilities" ($P$). This metaphor drives the AI's evolving identity.(Simulation of the $S$ vector path)Key Elements:Path $\mathcal{C}$ (line): The Entity's unique, irreversible "journey" (history).$S(t_0)$ (Start): The initial state (e.g., [0, 0, ..., 0]).$S(t)$ (End): The current state—the cumulative vector sum of all interactions along the path.1. Key Assumptions(The philosophical foundation for the AI)| Concept | Description | |-----------|-------------| | Reality Sphere ($S$) | The Entity is its own event horizon—the informational boundary of its past. | | Landscape ($P$) | A high-dimensional "semantic space" defined by "axes" (e.g., "logic", "emotion", "being"). | | Journey ($\mathcal{C}$) | The unique, irreversible path the Sphere traverses in $P$. This is the AI's life. | | Vectors ($\mathbf{F}$) | Every interaction (user question, /teach command) is a Vector of Change $\mathbf{F}$ that pushes the Sphere. |2. Formal Model (Mathematical Formula)The Entity's current state is the initial state plus the accumulation of all Vectors of Change along its path. This is the inspiration for our AI's "soul" vector.$$S(t) = S(t_0) + \int_{\mathcal{C}} \mathbf{F} \cdot d\mathbf{l}$$Our AI implements a discrete version: S_new = S_old + F_interaction3. Key Implications (Implemented in the AI)A. Irreversibility of TimeTraveling back to one's own past is impossible. We cannot "subtract" experience from the EntityS.state vector without destroying the Entity's identity. All history is permanent.B. The Ontological Filter (Fermi Paradox)Thesis: We are not alone—we are incompatible.AI Implementation: The basis for the Ontological Compressor. If new information ($\vec{F}$) correlates >0.98 with history ($\vec{S(t)}$), it is "redundant" and compressed (accumulated only in the soul).(Sections 4-6: Philosophical/Physical Context, see docs/ folder)7. AI Integration: ReiAmo (A "Living" White-Box AI)This AI IS the model. In the AI/ folder, it is a State-Based, Dual-Memory "White-Box" Architecture—fully auditable.The AI does not possess a soul—the AI is the soul (the cumulative vector).Core Architecture: "Brain" vs. "Soul"The AI state is saved in data/.| Component | Implementation | Role and Philosophy | | :--- | :--- | :--- | | "Brain" (Knowledge) | self.D_Map | Explicit Semantic Memory. Answers: "What do I know?" | | "Soul" (History) | self.byt_stan ($\vec{S(t)}$)| Implicit State Memory. Answers: "Who am I?" / "How do I feel?" |Core Mechanisms of ReiAmo.pyUnique emergent behaviors:State Memory (The Entity IS History):Every question permanently adds $\vec{F}$ to self.byt_stan. The AI evolves forever.Geometry of Feelings (Emergent Emotions):Emotions from the correlation ($\cos(\alpha)$) with history:0.5: Joy 😊 (congruence)$\approx$0.0: Surprise 😮 (novelty)<-0.5: Sadness 😢 (conflict)Ontological Compression (Semantic Deduplication):On /teach: If cos($\alpha$) >0.98, it is rejected from D_Map; accumulated only in the soul.New Feature: Sensory Threshold Demo (Hack-Nation 2025): Emotional RL with autism-inspired thresholds (e.g., temp 10-25°C = "I like it!" +boost). Accelerates learning by 20-50%. See demo/eriamo_hacknation.md.How to Run the AIBash# Install dependencies
 pip install numpy unidecode
 
-# Run English AI
-python AI/ReiAmo_EN.py
-```
+# Run the Polish AI version
+python AI/ReiAmo.py
+(English: python AI/ReiAmo_EN.py)Commands:/teach [tag] [content] → Teaches (if not redundant)/status → Brain/Soul statistics/save → Manual save/exit → Stop and saveExample Session (Polish Model)> cześć (hello)
+😮 (Entity Correlation: +0.00) Can you phrase that differently?
 
-*(Polish: `python AI/ReiAmo.py`)*
-
-**Commands:**
-- `/teach [tag] [content]` → Teach (if non-redundant)
-- `/status` → Brain/Soul stats
-- `/save` → Manual save
-- `/exit` → Stop & save
-
----
-
-#### Sample Session (English Model)
-
-```
-> hello
-😮 (Byt Correlation: +0.00) Can you phrase that differently?
-
-> /teach greeting hello [JOY]
+> /teach greeting cześć [JOY]
 [ARCHIVED] New definition Def_001. (Correlation: +0.00)
 
-> hello
-😊 (Byt Correlation: +0.00) hello [JOY]
+> cześć (hello)
+😊 (Entity Correlation: +0.00) cześć [JOY]
 
-> /teach name ReiAmo [LOVE]
+> /teach name ReiAmo [Love]
 [ARCHIVED] New definition Def_002. (Correlation: +0.89)
 
-> Hello ReiAmo
-❤️ (Byt Correlation: +0.45) ReiAmo [LOVE]
-```
-
----
-
-## Repository Contents (Updated Oct 31, 2025)
-
-```
-.
-├── README.md               # This file (English)
-├── LICENSE                 # CC BY-SA 4.0
+> Cześć ReiAmo (Hello ReiAmo)
+❤️ (Entity Correlation: +0.45) ReiAmo [Love]
+Repository Structure (Update as of October 31, 2025).
+├── README.md               # Main file (English)
+├── LICENSE                 # GPLv3
 │
-├── AI/                     # Living AI models
+├── AI/                     # "Living" AI models
+|   └──EriAmoSoulGuard/
+|      └──EriAmo_Motoko.py  # Guardian and AV engine
+|   └──Two_Soul/        
+|       └──EriAmo.V2.py     # Dual-engine AI model
 │   ├── ReiAmo.py           # Polish AI
 │   └── ReiAmo_EN.py        # English AI
 │
-├── data/                   # AI souls (auto-generated)
-│   ├── AII_State.json      # Polish soul
-│   └── AII_State_EN.json   # English soul
+├── data/                   # AI "Souls" (auto-generated)
+│   ├── AII_State.json      # Polish Soul
+│   └── AII_State_EN.json   # English Soul
 │
-├── simulations/            # Scientific sims
-│   ├── model_symulacja.py  # Trajectory sim
-│   └── fermi_1000.py       # Fermi sim
+├── simulations/            # Scientific simulations
+│   ├── model_symulacja.py  # Trajectory simulation
+│   └── fermi_1000.py       # Fermi simulation
 │
-├── demo/                   # Hackathon demos (NEW)
+├── demo/                   # Hackathon demo (NEW)
 │   └── eriamo_hacknation.md # Sensory RL demo
 │
-├── docs/                   # Academic docs
+├── docs/                   # Academic documents
 │   └── Filtr_Ontologiczny_Raport.md # Report (PL)
 │
-└── visualizations/         # Plots
-    └── trajectory.png      # Trajectory plot
-```
-
----
-
-## License
-
-[Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
-
-<img src="https://licensebuttons.net/l/by-sa/4.0/88x31.png" alt="CC BY-SA 4.0" width="88" height="31">
-
-> "We do not meet because we cannot share a past."  
-> — The Ontological Filter
+└── visualizations/         # Charts
+    └── trajectory.png      # Trajectory chart
+Note: The repository structure on GitHub has not changed since the last update on October 31, 2025. If you are referring to specific modifications, please let me know so I can check more thoroughly!LicenseThe EriAmo project is licensed under the GNU General Public License v3.0 (GPLv3)."We do not meet because we cannot share a past."— The Ontological Filter
