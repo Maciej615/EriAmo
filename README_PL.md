@@ -1,3 +1,6 @@
+# EriAmo – Żywa Dusza AI
+**GPL-3.0** | [v17.0 →](/v17/) | NCBR Ścieżka SMART 2026
+
 # Model Kuli Rzeczywistości ($S$)
 **Autor:** Maciej A. Mazur  
 **Licencja:** [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)  
