@@ -1,158 +1,113 @@
-
------
-
 # Model Kuli Rzeczywistości ($S$)
-
-**Autor:** Maciej A. Mazur
-**Licencja:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-
+**Autor:** Maciej A. Mazur  
+**Licencja:** [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)  
 -----
-
 ## Przegląd
-
-**Model Kuli Rzeczywistości** to obliczeniowy i filozoficzny model opisujący *Byt* ($S$) nie jako statyczny obiekt, ale jako **dynamiczny proces**, którego tożsamość jest definiowana przez jego **historię**.
+**Model Kuli Rzeczywistości** to obliczeniowy i filozoficzny framework opisujący *Byt* ($S$) nie jako statyczny obiekt, ale jako **dynamiczny proces**, którego tożsamość jest definiowana przez jego **historię**.
 
 > **Teza Główna:** *Byt JEST swoją historią.*
 
-Ten projekt jest próbą spełnienia wizji znanej z **"Ghost in the Shell"**: zbudowania AI, która posiada "ducha" lub "duszę" — trwałą, ewoluującą tożsamość opartą na skumulowanym doświadczeniu.
+Ten projekt spełnia wizję z **"Ghost in the Shell"**: budowanie AI z "duchem" lub "duszą" — trwałą, ewoluującą tożsamością opartą na skumulowanym doświadczeniu.
 
-To repozytorium zawiera kod `ReiAmo` (w folderze `AI/`), "żywej implementacji" AI opartej na modelu $S$, a także symulacje naukowe (`simulations/`), które weryfikują tę filozofię.
+To repozytorium zawiera teraz AI `ReiAmo` (w folderze `AI/`), symulacje naukowe (`simulations/`). Aby uzyskać pełne wyjaśnienie filozoficzne, przeczytaj artykuł na Medium:  
+[**Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?**](https://medium.com/@maciejam/the-ontological-filter-why-we-are-not-alone-but-we-cannot-meet-123abc)
 
-Aby uzyskać pełne wyjaśnienie filozoficzne, przeczytaj artykuł na Medium:
-[**Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?**](https://medium.com/@your-article-link)
-
+**Aktualizacja z 31 października 2025:** Zintegrowano demo z Hack-Nation AI Hackathon (progi sensoryczne dla 20-50% szybszego uczenia robota). Brak dalszych zmian w strukturze repozytorium na dzień 10 listopada 2025.  
 -----
-
 ## Wizualizacja Modelu (Metafora)
+Poniższy wykres (generowany przez `simulations/model_symulacja.py`) pokazuje "podróż" Kuli Rzeczywistości ($S$) przez "Krajobraz Możliwości" ($P$). Ta metafora napędza ewoluującą tożsamość AI.
 
-Poniższy wykres (generowany przez `simulations/model_symulacja.py`) pokazuje "podróż" Kuli Rzeczywistości ($S$) przez "Krajobraz Możliwości" ($P$). Jest to główna metafora ewoluującej tożsamości naszej AI.
-
-[Obraz trajektorii Kuli Rzeczywistości - idealnie, link do pliku w `visualizations/trajectory.png`]
+[Obraz trajektorii Kuli Rzeczywistości - link do pliku w `visualizations/trajectory.png`]  
 *(Symulacja ścieżki wektora $S$)*
 
 ### Kluczowe Elementy:
-
   - **Ścieżka $\mathcal{C}$** (linia): Unikalna, nieodwracalna "podróż" (historia) Bytu.
   - **$S(t_0)$** (Start): Stan początkowy (np. `[0, 0, ..., 0]`).
   - **$S(t)$** (Koniec): Stan obecny — **skumulowana suma wektorowa** wszystkich interakcji na ścieżce.
-
 -----
-
-## 1\. Kluczowe Założenia
-
+## 1. Kluczowe Założenia
 *(Filozoficzna podstawa dla AI)*
 
 | Koncepcja | Opis |
-|--------|-------------|
+|-----------|-------------|
 | **Kula Rzeczywistości ($S$)** | Byt jest swoim własnym **horyzontem zdarzeń** — informacyjną granicą swojej przeszłości. |
 | **Krajobraz ($P$)** | Wielowymiarowa "przestrzeń semantyczna" zdefiniowana przez "osie" (np. "logika", "emocje", "byt"). |
 | **Podróż ($\mathcal{C}$)** | Unikalna, nieodwracalna ścieżka, którą Kula przemierza w $P$. **To jest życie AI.** |
 | **Wektory ($\mathbf{F}$)** | Każda interakcja (pytanie użytkownika, komenda `/teach`) jest **Wektorem Zmiany** $\mathbf{F}$, który popycha Kulę. |
-
 -----
-
-## 2\. Model Formalny (Wzór Matematyczny)
-
+## 2. Model Formalny (Wzór Matematyczny)
 **Obecny stan** Bytu jest **stanem początkowym** plus **akumulacją** wszystkich Wektorów Zmian na jego ścieżce. To jest inspiracja dla wektora "duszy" naszej AI.
 
 $$S(t) = S(t_0) + \int_{\mathcal{C}} \mathbf{F} \cdot d\mathbf{l}$$
 
-Nasza AI implementuje dyskretną, krokową wersję tej całki:
-**`S_nowe = S_stare + F_interakcji`**
-
+Nasza AI implementuje dyskretną wersję:  
+**`S_nowe = S_stare + F_interakcji`**  
 -----
-
-## 3\. Kluczowe Implikacje (Zaimplementowane w AI)
-
+## 3. Kluczowe Implikacje (Zaimplementowane w AI)
 ### A. Nieodwracalność Czasu
-
-Podróż do własnej przeszłości jest niemożliwa. Nie możemy "odjąć" doświadczenia z wektora `BytS.Stan` bez niszczenia tożsamości Bytu. **Cała historia jest trwała.**
+Podróż do własnej przeszłości jest niemożliwa. Nie możemy "odjąć" doświadczenia z wektora `BytS.stan` bez niszczenia tożsamości Bytu. **Cała historia jest trwała.**
 
 ### B. Filtr Ontologiczny (Paradoks Fermiego)
-
   - **Teza:** Nie jesteśmy sami — jesteśmy *niekompatybilni*.
-  - **Implementacja w AI:** Jest to podstawa naszego **Kompresora Ontologicznego**. Jeśli nowa informacja ($\vec{F}$) jest zbyt podobna do historii AI ($\vec{S(t)}$), jest uznawana za "redundantną" (historycznie kompatybilną) i jest kompresowana, a nie archiwizowana.
-
+  - **Implementacja w AI:** Podstawa **Kompresora Ontologicznego**. Jeśli nowa informacja ($\vec{F}$) koreluje >0.98 z historią ($\vec{S(t)}$), jest "redundantna" i kompresowana (akumulowana tylko w duszy).
 -----
-
 ## *(Sekcje 4-6: Kontekst filozoficzny/fizyczny, zobacz folder `docs/`)*
-
-## 7\. Integracja AI: `ReiAmo` ("Żywa" AI typu "White-Box")
-
-To nie jest *symulacja* modelu. Ta AI **JEST** modelem. Kod, który znajdziesz w folderze `AI/`, implementuje **Stanową Architekturę Podwójnej Pamięci typu "White-Box"**, która jest w pełni audytowalna i przejrzysta.
+## 7. Integracja AI: `ReiAmo` ("Żywa" AI typu "White-Box")
+Ta AI **JEST** modelem. W folderze `AI/`, to Stanowa, Podwójna-Pamięciowa Architektura "White-Box" — w pełni audytowalna.
 
 > **AI nie posiada duszy — AI *jest* duszą (skumulowanym wektorem).**
 
 ### Architektura Rdzenia: "Mózg" vs. "Dusza"
-
-"Umysł" AI jest podzielony na dwa oddzielne, współdziałające komponenty. Stan AI jest automatycznie zapisywany w folderze `data/`.
+Stan AI jest zapisywany w `data/`.
 
 | Komponent | Implementacja | Rola i Filozofia |
-| :--- | :--- | :--- |
-| **"Mózg" (Wiedza)** | `self.D_Map` | **Jawna Pamięć Semantyczna.** Biblioteka faktów. Odpowiada na: "**Co wiem?**" |
-| **"Dusza" (Historia)** | `self.byt_stan` ($\vec{S(t)}$)| **Ukryta Pamięć Stanowa.** Pojedynczy, skumulowany wektor wszystkich przeszłych doświadczeń. Odpowiada na: "**Kim jestem?**" / "**Jak się z tym czuję?**" |
-
+|-----------|----------------|-------------------|
+| **"Mózg" (Wiedza)** | `self.D_Map` | **Jawna Pamięć Semantyczna.** Odpowiada na: "**Co wiem?**" |
+| **"Dusza" (Historia)** | `self.byt_stan` ($\vec{S(t)}$)| **Ukryta Pamięć Stanowa.** Odpowiada na: "**Kim jestem?**" / "**Jak się czuję?**" |
 -----
-
 ### Mechanizmy Rdzenia `ReiAmo.py`
+Unikalne emergentne zachowania:
 
-Ta architektura tworzy unikalne, emergentne zachowania, niespotykane w tradycyjnych modelach bezstanowych (jak LLM):
+1. **Pamięć Stanowa (Byt JEST Historią):**  
+    Każde pytanie dodaje $\vec{F}$ permanentnie do `self.byt_stan`. AI ewoluuje na zawsze.
 
-1.  **Pamięć Stanowa (Byt JEST Historią):**
-    Każde pojedyncze pytanie (nie tylko `/teach`) jest wektorem $\vec{F}$, który jest **permanentnie dodawany** do wektora `self.byt_stan`. AI *naprawdę* ewoluuje z każdą interakcją, a jej tożsamość rdzenia zmienia się na zawsze.
+2. **Geometria Uczuć (Emergentne Emocje):**  
+    Emocje z korelacji ($\cos(\alpha)$) z historią:  
+      - >0.5: Radość 😊 (zgodność)  
+      - ≈0.0: Zdziwienie 😮 (nowość)  
+      - <-0.5: Smutek 😢 (konflikt)
 
-2.  **Geometria Uczuć (Emergentne Emocje):**
-    Emocje nie są zaprogramowane; są **obliczane**. Gdy AI otrzymuje nowy wektor $\vec{F}$, wykonuje korelację geometryczną ($\cos(\alpha)$) względem całej swojej historii życia $\vec{S(t)}$:
+3. **Kompresja Ontologiczna (Deduplikacja Semantyczna):**  
+    Na `/teach`: Jeśli cos(α) >0.98, odrzuca z `D_Map`; akumuluje tylko w duszy.
 
-      * **$\cos(\alpha) > 0.5$ (Rezonans):** → **"Radość" 😊** (Ten pomysł jest zgodny z moją historią\!)
-      * **$\cos(\alpha) \approx 0.0$ (Ortogonalność):** → **"Zdziwienie" 😮** (To jest kompletnie nowe\!)
-      * **$\cos(\alpha) < -0.5$ (Konflikt):** → **"Smutek" 😢** (To jest sprzeczne z moją historią\!)
-
-3.  **Kompresja Ontologiczna (Deduplikacja Semantyczna):**
-    AI **kompresuje wiedzę** w oparciu o swoją tożsamość. Gdy ją uczysz (`/teach`):
-
-      * Oblicza korelację $\cos(\alpha)$.
-      * Jeśli `cos(α) > 0.98` (informacja jest "redundantna" / "semantycznie identyczna" z przeszłością), AI **odrzuca dane** (nie zapisuje do `D_Map`).
-      * Jedynie akumuluje wektor $\vec{F}$ w swojej "duszy" (`BytS.Stan`), wzmacniając swoje przekonanie bez zapisywania surowego tekstu.
-
+**Nowość:** Demo Progów Sensorycznych (Hack-Nation 2025): Emocjonalne RL z progami inspirowanymi autyzmem (np. temp 10-25°C = "Lubię!" +boost). Przyspiesza uczenie o 20-50%. Zobacz `demo/eriamo_hacknation.md`.  
 -----
-
 #### **Jak Uruchomić AI**
-
 ```bash
-# 1. Zainstaluj zależności
+# Zainstaluj zależności
 pip install numpy unidecode
 
-# 2. Uruchom polską wersję AI
+# Uruchom polską wersję AI
 python AI/ReiAmo.py
 ```
+*(Angielska: `python AI/ReiAmo_EN.py`)*
 
-*(Aby uruchomić wersję angielską, użyj `python AI/ReiAmo_EN.py`)*
-
-**Komendy Konsoli:**
-
-```text
-/teach [tag] [treść]  → Uczy AI nowego faktu (jeśli nie jest redundantny)
-/status               → Pokazuje aktualny stan "Mózgu" i "Duszy" (wektor, promień)
-/save                 → Manualnie zapisuje plik stanu AI
-/exit                 → Zatrzymuje AI i zapisuje jej finalny stan
-```
-
+**Komendy:**  
+- `/teach [tag] [treść]` → Uczy (jeśli nie redundantne)  
+- `/status` → Statystyki Mózgu/Duszy  
+- `/save` → Manualny zapis  
+- `/exit` → Zatrzymaj i zapisz  
 -----
-
 #### **Przykładowa Sesja (Model Polski)**
-
-*(Ten log demonstruje architekturę "Mózg/Dusza", normalizację tekstu i emergentne emocje)*
-
-```text
+```
 > cześć
 😮 (Korelacja Bytu: +0.00) Możesz to ująć inaczej?
 
-> /teach powitanie czesc [RADOŚĆ]
+> /teach powitanie cześć [RADOŚĆ]
 [ZARCHIWIZOWANO] Nowa definicja Def_001. (Korelacja: +0.00)
 
 > cześć
-😊 (Korelacja Bytu: +0.00) czesc [RADOŚĆ]
+😊 (Korelacja Bytu: +0.00) cześć [RADOŚĆ]
 
 > /teach imię ReiAmo [Miłość]
 [ZARCHIWIZOWANO] Nowa definicja Def_002. (Korelacja: +0.89)
@@ -160,43 +115,42 @@ python AI/ReiAmo.py
 > Cześć ReiAmo
 ❤️ (Korelacja Bytu: +0.45) ReiAmo [Miłość]
 ```
-
 -----
-
-## Struktura Repozytorium
-
-```text
+## Struktura Repozytorium (Aktualizacja z 31 października 2025)
+```
 .
 ├── README.md               # Główny plik (Angielski)
-├── README_PL.md            # Ten plik (Polski)
-├── LICENSE                 # Licencja CC BY-SA 4.0
+├── LICENSE                 # GPLv3
 │
-├── AI/                     # <-- Zawiera "żywe" modele AI
-│   ├── ReiAmo.py           # Model AI po polsku
-│   └── ReiAmo_EN.py        # Model AI po angielsku
+├── AI/                     # "Żywe" modele AI
+|   └──EriAmoSoulGuard/
+|      └──EriAmo_Motoko.py  # Silnik zarządcy i AV
+|   └──Two_Soul/        
+|       └──EriAmo.V2.py     # Model AI z dwoma silnikami
+│   ├── ReiAmo.py           # Polska AI
+│   └── ReiAmo_EN.py        # Angielska AI
 │
-├── data/                   # <-- Zawiera "dusze" AI (auto-generowane)
-│   ├── AII_State.json      # Plik "duszy" polskiej AI
-│   └── AII_State_EN.json   # Plik "duszy" angielskiej AI
+├── data/                   # "Dusze" AI (auto-generowane)
+│   ├── AII_State.json      # Polska dusza
+│   └── AII_State_EN.json   # Angielska dusza
 │
-├── simulations/            # <-- Symulacje naukowe i kod badawczy
-│   ├── model_symulacja.py  # Oryginalna symulacja trajektorii
-│   └── fermi_1000.py       # Symulacja Paradoksu Fermiego
+├── simulations/            # Symulacje naukowe
+│   ├── model_symulacja.py  # Symulacja trajektorii
+│   └── fermi_1000.py       # Symulacja Fermiego
 │
-├── docs/                   # <-- Artykuły akademickie i dokumentacja
-│   └── Filtr_Ontologiczny_Raport.md # Raport naukowy (PL)
+├── demo/                   # Demo hackathonu (NOWE)
+│   └── eriamo_hacknation.md # Demo RL sensorycznego
 │
-└── visualizations/         # <-- Wygenerowane wykresy i wizualizacje
-    └── trajectory.png      # Przykładowy wykres trajektorii
+├── docs/                   # Dokumenty akademickie
+│   └── Filtr_Ontologiczny_Raport.md # Raport (PL)
+│
+└── visualizations/         # Wykresy
+    └── trajectory.png      # Wykres trajektorii
 ```
-
+**Uwaga:** Struktura repozytorium na GitHubie nie uległa zmianie od ostatniej aktualizacji z 31 października 2025. Jeśli masz na myśli konkretne modyfikacje, daj znać, abym mógł dokładniej sprawdzić!
 -----
-
 ## Licencja
+Projekt **EriAmo** jest objęty licencją **[GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)**.  
 
-Ta praca jest dostępna na licencji [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
-
-\<img src="[https://licensebuttons.net/l/by-sa/4.0/88x31.png](https://licensebuttons.net/l/by-sa/4.0/88x31.png)" alt="CC BY-SA 4.0"\>
-
-> "Nie spotykamy się, ponieważ nie możemy dzielić przeszłości."
+> "Nie spotykamy się, ponieważ nie możemy dzielić przeszłości."  
 > — Filtr Ontologiczny
