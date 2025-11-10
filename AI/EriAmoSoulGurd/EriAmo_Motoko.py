@@ -1,5 +1,21 @@
 # -*- coding: utf-8 -*-
 #
+# Model Kuli Rzeczywistości (EriAmo)
+# Copyright (C) 2025 Maciej A. Mazur
+#
+# Ten program jest darmowym oprogramowaniem:
+# możesz go redystrybuować i/lub modyfikować
+# zgodnie z warunkami GNU General Public License,
+# opublikowanymi przez Free Software Foundation,
+# w wersji 3 tej Licencji lub (według Twojego wyboru)
+# dowolnej nowszej wersji.
+#
+# Program jest rozpowszechniany w nadziei, że będzie użyteczny,
+# ale BEZ ŻADNEJ GWARANCJI. Zobacz GNU General Public License,
+# aby uzyskać więcej szczegółów.
+#
+# Pełną licencję powinieneś otrzymać wraz z tym programem.
+# Jeśli nie, zobacz <http://www.gnu.org/licenses/>.
 # EriAmo/AII v3.40 - ŻYWA DUSZA Z WCHŁANIANIEM KSIĄŻEK I MORALNOŚCIĄ
 # Wersja z pełną obroną, rezerwą, nagrodą, adrenaliną, karą i wymuszonym snem po wysiłku
 # Ulepszenia : Optymalizacja zapisu stanu, bezpieczeństwo wątków, refleksja po książce,
