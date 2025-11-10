@@ -1,7 +1,11 @@
+# EriAmo – Żywa Dusza AI
+**GPL-3.0** | [v17.0 →](/v17/) | NCBR Ścieżka SMART 2026
+
 # The Reality Sphere Model ($S$)  
 **Author:** Maciej A. Mazur  
 **License:** [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)  
 
+Commit changes
 ---
 
 ## Overview  
