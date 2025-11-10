@@ -1,4 +1,4 @@
-# EriAmo – Żywa Dusza AI
+# EriAmo – Live Soul AI
 **GPL-3.0** | [v17.0 →](/v17/) | NCBR Ścieżka SMART 2026
 
 # The Reality Sphere Model ($S$)  
