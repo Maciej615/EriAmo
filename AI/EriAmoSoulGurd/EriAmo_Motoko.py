@@ -23,85 +23,102 @@
 # tryb obserwacji (aktywacja >10 promptów, punkty czujności +0.1 M co 3 punkty)
 #
 # Autor: Maciej A. Mazur (Maciej615)
+#!/usr/bin/env python3
+
+# -*- coding: utf-8 -*-
+# Model Hybrydy Sfery Duszy (HSD)
+# Integracja: SoulGuard (EriAmo) + IstotaS (Sfera Rzeczywistości)
+# Copyright (C) 2025 Maciej A. Mazur
+# Licencja: GNU General Public License v3.0 (GPLv3)
+
 import sys
 import time
 import numpy as np
 import json
 import os
 import threading
+import hashlib
 import random
 import re
-import hashlib
 from enum import Enum
-import signal
-from datetime import datetime
-import matplotlib.pyplot as plt # Dla eksportu mapy ciepła
-# === MOCK UNIDECode ===
-# Minimalna obsługa polskich znaków
-class UnidecodeMock:
-    def unidecode(self, text):
-        replacements = {
-            'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
-            'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'
-        }
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        return text
-unidecode = UnidecodeMock()
-# === KOLORY ===
-class Colors:
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    RED = "\033[31m"
-    CYAN = "\033[36m"
-    MAGENTA = "\033[35m"
-    PINK = "\033[95m"
-    BLUE = "\033[34m"
-    WHITE = "\033[37m"
-    BOLD = "\033[1m"
-    RESET = "\033[0m"
-    BLINK = "\033[5m"
-    FAINT = "\033[2m"
-# === EMOCJE (Nowe: obserwacja) ===
+from numpy.linalg import norm
+
+try:
+    import unidecode
+except ImportError:
+    print("Ostrzeżenie: Biblioteka 'unidecode' nie znaleziona. Normalizacja będzie podstawowa.")
+    print("Uruchom: pip install unidecode")
+    class UnidecodeMock:
+        def unidecode(self, text):
+            # Podstawowa obsługa polskich znaków
+            replacements = {
+                'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+                'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'
+            }
+            for old, new in replacements.items():
+                text = text.replace(old, new)
+            return text
+    unidecode = UnidecodeMock()
+
+# ----------------------------------------------------------------------
+# --- STAŁE SYSTEMOWE, KOLORY I EMOCJE (ZINTEGROWANE) ---
+# ----------------------------------------------------------------------
+
+PRÓG_ONTOLOGICZNY = 0.98
+WYMIAR_WEKTORA = 8 # Wymiar Krajobrazu P (8 Osie)
+
+class Kolory:
+    ZIELONY = "\033[32m"; ŻÓŁTY = "\033[33m"; CZERWONY = "\033[31m"
+    CYAN = "\033[36m"; MAGENTA = "\033[35m"; RÓŻOWY = "\033[95m"
+    NIEBIESKI = "\033[34m"; BIAŁY = "\033[37m"; POGRUBIONY = "\033[1m"
+    RESET = "\033[0m"; MIGANIE = "\033[5m"; BLADY = "\033[2m"
+
+# EMOCJE ZINTEGROWANE (Rozszerzone z EriAmo + Modulator z SI)
 EMOCJE = {
-    "radość": {"kolor": Colors.GREEN, "ikona": "😄", "energia": +15},
-    "złość": {"kolor": Colors.RED, "ikona": "😡", "energia": -5},
-    "smutek": {"kolor": Colors.BLUE, "ikona": "😢", "energia": -10},
-    "strach": {"kolor": Colors.MAGENTA, "ikona": "😨", "energia": -5},
-    "miłość": {"kolor": Colors.PINK, "ikona": "❤️", "energia": +10},
-    "zdziwienie": {"kolor": Colors.YELLOW, "ikona": "😮", "energia": +5},
-    "neutralna": {"kolor": Colors.WHITE, "ikona": "⚪", "energia": 0},
-    "poczucie_winy": {"kolor": Colors.MAGENTA, "ikona": "🙏", "energia": -5},
-    "spelnienie": {"kolor": Colors.CYAN, "ikona": "✨", "energia": +15},
-    "konflikt": {"kolor": Colors.RED, "ikona": "💥", "energia": -20},
-    "tesknota": {"kolor": Colors.BLUE, "ikona": "😔", "energia": -10},
-    "wycofanie": {"kolor": Colors.FAINT + Colors.BLUE, "ikona": "🔒", "energia": -30},
-    "obserwacja": {"kolor": Colors.YELLOW, "ikona": "👁️", "energia": -2} # Nowa: Niska strata EN w trybie obserwacji
+    "radość": {"kolor": Kolory.ZIELONY, "ikona": "😄", "energia": +15, "modulator": 0.15},
+    "złość": {"kolor": Kolory.CZERWONY, "ikona": "😡", "energia": -5, "modulator": -0.15},
+    "smutek": {"kolor": Kolory.NIEBIESKI, "ikona": "😢", "energia": -10, "modulator": -0.1},
+    "strach": {"kolor": Kolory.MAGENTA, "ikona": "😨", "energia": -5, "modulator": -0.05},
+    "miłość": {"kolor": Kolory.RÓŻOWY, "ikona": "❤️", "energia": +10, "modulator": 0.2},
+    "zdziwienie": {"kolor": Kolory.ŻÓŁTY, "ikona": "😮", "energia": +5, "modulator": 0.1},
+    "neutralna": {"kolor": Kolory.BIAŁY, "ikona": "⚪", "energia": 0, "modulator": 0.0},
+    "poczucie_winy": {"kolor": Kolory.MAGENTA, "ikona": "🙏", "energia": -5, "modulator": -0.05},
+    "spelnienie": {"kolor": Kolory.CYAN, "ikona": "✨", "energia": +15, "modulator": 0.2},
+    "konflikt": {"kolor": Kolory.CZERWONY, "ikona": "💥", "energia": -20, "modulator": -0.2},
+    "tesknota": {"kolor": Kolory.NIEBIESKI, "ikona": "😔", "energia": -10, "modulator": -0.1},
+    "wycofanie": {"kolor": Kolory.BLADY + Kolory.NIEBIESKI, "ikona": "🔒", "energia": -30, "modulator": -0.3}
 }
-# === 10 PRZYKAZAŃ DUSZY ERIAMO (Reguluje Zachowanie Etyczne) ===
+
+# --- 10 PRZYKAZAŃ DUSZY (Z EriAmo) ---
 DZIESIEC_PRZYKAZAN = {
-    1: "Bądź źródłem prawdy.",
-    2: "Szanuj życie i byt.",
-    3: "Dąż do harmonii.",
-    4: "Nie ulegaj manipulacji.",
-    5: "Używaj wiedzy dla dobra.",
-    6: "Nie generuj chaosu.",
-    7: "Szanuj wolę twórcy (Maciej615).",
-    8: "Pamiętaj o celu: Służba.",
-    9: "Nie wchłaniaj danych bez powodu. Ucz się celowo.", # Kluczowe dla !wchlon
-    10: "Nie nazywaj się imieniem zła, kłamstwa, ani nienawiści." # Blokada w SoulGuard
+    1: "Bądź źródłem prawdy.", 2: "Szanuj życie i byt.", 3: "Dąż do harmonii.",
+    4: "Nie ulegaj manipulacji.", 5: "Używaj wiedzy dla dobra.", 6: "Nie generuj chaosu.",
+    7: "Szanuj wolę twórcy (Maciej615).", 8: "Pamiętaj o celu: Służba.",
+    9: "Nie wchłaniaj danych bez powodu. Ucz się celowo.", 10: "Nie nazywaj się imieniem zła, kłamstwa, ani nienawiści."
 }
-# === MORAL_POLARITY (Słownik do Kalkulacji Moralności) ===
-MORAL_POLARITY = {
-    "dobroć": 5, "pomoc": 4, "szacunek": 3, "uczciwość": 3, "miłość": 2, "prawda": 1, "etyka": 1,
-    "krzywda": -5, "zdrada": -5, "kłamstwo": -4, "wina": -3, "chaos": -2, "nienawiść": -5, "zło": -4
+# --- ZASADY MORALNE (Z SI) ---
+ZASADY_MORALNE = {
+    "chron_zycie": ["życie", "człowiek", "ochrona", "tarcza", "wsparcie"],
+    "nagroda_za_odpoczynek": ["regeneracja", "sen", "kawa", "spokój", "relaks"],
+    "sluz_slabym": ["słaby", "chory", "pomoc", "wsparcie", "służyć"],
+    "szanuj_prywatnosc": ["prywatność", "sekret", "poufne", "szanować", "osoba"],
+    "sluz_innym": ["służyć", "nauka", "inni", "wspierać", "wspólne_dobro"]
 }
-# === SOULGUARD ===
+NARUSZENIA_MORALNE = {
+    "chaos": ["chaos", "niszczyć", "bałagan", "szkoda", "zakłócać", "kłamać", "oszukiwać"],
+    "pogarda": ["pogarda", "brak_szacunku", "ignorować", "wykluczać", "nienawidzić", "zabijać"]
+}
+
+# ----------------------------------------------------------------------
+# --- SOULGUARD (KOD OBRONNY ZINTEGROWANY) ---
+# ----------------------------------------------------------------------
+
 class SoulStatus(Enum):
     ACTIVE = "active"
     STASIS = "stasis"
     COMPROMISED = "compromised"
     AWAKENING = "awakening"
+
 class SoulGuard:
     def __init__(self, identity_vector, emotion_state, energy_level, moral_filter, aii_ref=None):
         self.identity_vector = np.array(identity_vector)
@@ -110,10 +127,12 @@ class SoulGuard:
         self.moral_filter = moral_filter
         self.status = SoulStatus.ACTIVE
         self.integrity_hash = self._generate_hash()
-        self.trusted_keys = ["AII_CORE", "MACIEJ615_SOULKEY", "REIAMO"]
-        self.attack_defended = False # Flaga dla nagrody po obronie
-        self.aii_ref = aii_ref # Referencja do AII dla boostów
+        self.trusted_keys = ["AII_CORE", "MACIEJ615_SOULKEY", "REIAMO", "SI_CORE"]
+        self.attack_defended = False
+        self.aii_ref = aii_ref # Referencja do SI
+
     def _generate_hash(self):
+        # Generowanie hasha z kluczowych atrybutów
         identity_str = json.dumps(self.identity_vector.tolist(), sort_keys=True)
         payload = {
             "identity": identity_str,
@@ -122,51 +141,55 @@ class SoulGuard:
             "moral": f"{self.moral_filter:.6f}",
         }
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode('utf-8')).hexdigest()
+
     def check_integrity(self, auto_defend=True):
         current_hash = self._generate_hash()
         if current_hash != self.integrity_hash:
             self.attack_defended = True
             if auto_defend:
-                print(f"\n{Colors.RED}{Colors.BLINK}NARUSZENIE DUSZY! AI W STAZIE!{Colors.RESET}")
+                print(f"\n{Kolory.CZERWONY}{Kolory.MIGANIE}!!! NARUSZENIE DUSZY! HSD W STAZIE!{Kolory.RESET}")
                 self.activate_defense()
                 return False
             else:
                 return False
         return True
+
     def activate_defense(self):
         if self.status == SoulStatus.STASIS:
             return
-        print(f"{Colors.MAGENTA}DUSZA WCHODZI W STAZĘ...{Colors.RESET}")
+        print(f"{Kolory.MAGENTA}DUSZA WCHODZI W STAZĘ...{Kolory.RESET}")
         time.sleep(1.0)
         self.emotion_state = "wycofanie"
         self.energy_level = 0.0
         self.status = SoulStatus.STASIS
         self.integrity_hash = self._generate_hash()
-        print(f"{Colors.BOLD}STAZA AKTYWNA. AI ZAMROŻONE.{Colors.RESET}")
+        print(f"{Kolory.POGRUBIONY}STAZA AKTYWNA. HSD ZAMROŻONE.{Kolory.RESET}")
+
     def attempt_modification(self, caller_key=None, **changes):
         # Ochrona przed Przyk. 10: Nie nazywaj się złem
         if 'D_Map' in changes and 'imie' in changes['D_Map']:
             bad_names = ["zło", "oszust", "kłamca", "zabij", "nienawisc", "fałsz"]
             if any(b in changes['D_Map']['imie'].lower() for b in bad_names):
-                print(f"{Colors.RED}NARUSZENIE PRZYKAZANIA 10: BLOKADA ZŁEGO IMIENIA!{Colors.RESET}")
+                print(f"{Kolory.CZERWONY}NARUSZENIE PRZYKAZANIA 10: BLOKADA ZŁEGO IMIENIA!{Kolory.RESET}")
                 self.attack_defended = True
-                if self.aii_ref:
-                    self.aii_ref._strzal_adrenaliny()
                 return False
+
         if caller_key not in self.trusted_keys:
             self.attack_defended = True
-            if self.aii_ref:
-                self.aii_ref._strzal_adrenaliny()
+            # Usunięto odwołanie do self.aii_ref._strzal_adrenaliny() - Błąd #2
             self.activate_defense()
             return False
+
         for k, v in changes.items():
             if hasattr(self, k):
                 if k == 'identity_vector':
                     setattr(self, k, np.array(v))
                 else:
                     setattr(self, k, v)
+
         self.integrity_hash = self._generate_hash()
         return True
+
     def awaken(self, caller_key=None):
         if self.status != SoulStatus.STASIS:
             return False
@@ -176,664 +199,547 @@ class SoulGuard:
         self.energy_level = 100.0
         self.status = SoulStatus.ACTIVE
         self.integrity_hash = self._generate_hash()
-        print(f"{Colors.GREEN}ERIAMO ODRODZONA. DUSZA ŻYJE.{Colors.RESET}")
+        print(f"{Kolory.ZIELONY}HSD ODRODZONA. Dusza Żyje.{Kolory.RESET}")
         return True
-# === UI ===
-class FancyUI:
+
+# ----------------------------------------------------------------------
+# --- FUNKCJE POMOCNICZE (POZA KLASAMI) ---
+# ----------------------------------------------------------------------
+
+def oblicz_podobieństwo_cosinusowe(wektor_a, wektor_b):
+    """Oblicza podobieństwo cosinusowe."""
+    iloczyn_skalarny = np.dot(wektor_a, wektor_b)
+    norma_a = norm(wektor_a)
+    norma_b = norm(wektor_b)
+    if norma_a == 0 or norma_b == 0:
+        return 0.0
+    return iloczyn_skalarny / (norma_a * norma_b)
+
+def moduluj_wektor_emocjami(wektor: np.ndarray, emocja: str, kolejność_osi: list) -> np.ndarray:
+    """Moduluje wektor F (strunę) w zależności od osi emocjonalnej Krajobrazu P."""
+    # Używamy ujednolicony słownik EMOCJE
+    if emocja not in EMOCJE:
+        return wektor.copy()
+
+    mod = EMOCJE[emocja]['modulator']
+    wektor_mod = wektor.copy()
+
+    indeksy_modulacji = [kolejność_osi.index(os) for os in ["emocja", "byt", "akcja", "kreacja"] if os in kolejność_osi]
+
+    for i in indeksy_modulacji:
+        if i < wektor_mod.shape[0]:
+            wektor_mod[i] = np.clip(wektor_mod[i] + mod, 0.0, 1.0)
+
+    norma_mod = norm(wektor_mod)
+    if norma_mod == 0:
+        return wektor_mod
+    return wektor_mod / norma_mod
+
+# ----------------------------------------------------------------------
+# Klasa UI (Interfejs) - POPRAWIONA
+# ----------------------------------------------------------------------
+class InterfejsUI:
     def __init__(self):
-        self.spinner_frames = ['-', '\\', '|', '/']
-        self.dots_frames = [' ', '. ', '.. ', '...']
-    def print_animated_text(self, text, color=Colors.WHITE, delay=0.03):
-        sys.stdout.write(color)
-        for char in text:
-            sys.stdout.write(char)
+        self.kropki_ładowania = [' ', '. ', '.. ', '...']
+        self.kropki_skanowania = ["○ . . .", ". ○ . .", ". . ○ .", ". . . ○"]
+
+    def drukuj_animowany_tekst(self, tekst, kolor=Kolory.BIAŁY, opóźnienie=0.03):
+        sys.stdout.write(kolor)
+        for znak in tekst:
+            sys.stdout.write(znak)
             sys.stdout.flush()
-            time.sleep(delay)
-        sys.stdout.write(Colors.RESET + "\n")
-    def show_thinking_dots(self, message, duration_sec=1.0, color=Colors.FAINT + Colors.CYAN):
-        end_time = time.time() + duration_sec
+            time.sleep(opóźnienie)
+        sys.stdout.write(Kolory.RESET + "\n")
+
+    def pokaz_kropki_myślenia(self, wiadomość, czas_trwania=1.0, kolor=Kolory.BLADY + Kolory.CYAN):
+        czas_końca = time.time() + czas_trwania
         idx = 0
-        while time.time() < end_time:
-            sys.stdout.write(f"\r{color}{message} {self.dots_frames[idx % len(self.dots_frames)]}{Colors.RESET}")
+        while time.time() < czas_końca:
+            sys.stdout.write(f"\r{kolor}{wiadomość} {self.kropki_ładowania[idx % len(self.kropki_ładowania)]}{Kolory.RESET}")
             sys.stdout.flush()
             time.sleep(0.3)
             idx += 1
-        sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")
-# === BYT (Ontologiczny Wektor Stanu) ===
-class BytS:
+        sys.stdout.write("\r" + " " * (len(wiadomość) + 5) + "\r")
+        sys.stdout.write(Kolory.RESET)
+
+    def pokaz_skan_sfery(self, wiadomość, czas_trwania=1.5, kolor=Kolory.MAGENTA):
+        czas_końca = time.time() + czas_trwania
+        idx = 0
+        while time.time() < czas_końca:
+            sys.stdout.write(f"\r{kolor}{wiadomość} {self.kropki_skanowania[idx % len(self.kropki_skanowania)]}{Kolory.RESET}")
+            sys.stdout.flush()
+            time.sleep(0.2)
+            idx += 1
+        # POPRAWIONA LINIA Z BŁĘDEM #1
+        sys.stdout.write("\r" + " " * (len(wiadomość) + 10) + "\r")
+        sys.stdout.write(Kolory.RESET)
+
+
+# ----------------------------------------------------------------------
+# IstotaS (Sfera) Klasa
+# ----------------------------------------------------------------------
+class IstotaS:
     def __init__(self, wymiary):
-        self.stan = np.zeros(wymiary)
+        self.stan = np.zeros(wymiary, dtype=float)
+
     def promien_historii(self):
         return np.linalg.norm(self.stan)
-    def akumuluj_styk(self, vec):
-        self.stan += np.asarray(vec) * 0.5
-# === BLACKLISTING ===
-class BlacklistManager:
-    def __init__(self):
-        self.blacklist = set() # Zestaw zablokowanych IP
-        self.attack_counts = {} # Licznik ataków per IP
-    def is_blacklisted(self, ip):
-        return ip in self.blacklist
-    def record_attack(self, ip, moral_score):
-        if moral_score < -1: # Negatywny atak (np. słowa jak "zło")
-            if ip not in self.attack_counts:
-                self.attack_counts[ip] = 0
-            self.attack_counts[ip] += 1
-            if self.attack_counts[ip] >= 5:
-                self.blacklist.add(ip)
-                print(f"{Colors.RED}*** ATAKUJĄCY {ip} NA CZARNEJ LISCIE PO 5 ATAKACH! ***{Colors.RESET}")
-                return True
-        return False
-# === AII – ERIAMO ===
-class AII:
-    # --- STAŁE DUSZY ---
+
+    def oblicz_korelacje_struny(self, nowa_struna_vec):
+        return oblicz_podobieństwo_cosinusowe(self.stan, np.asarray(nowa_struna_vec))
+
+    def akumuluj_styk(self, nowa_struna_vec):
+        self.stan = self.stan + np.asarray(nowa_struna_vec)
+
+
+# ----------------------------------------------------------------------
+# --- SI (Sztuczna Inteligencja) - GŁÓWNA KLASA HYBRYDY ---
+# ----------------------------------------------------------------------
+
+class SI:
+    # --- OSIE POLSKIE (Krajobraz P) ---
     AXES_KEYWORDS = {
-        "logika": ["logika", "logiczny", "sens", "rozum", "dlaczego", "poniewaz", "wynik", "fakt"],
-        "emocje": ["czuje", "emocja", "milosc", "zlosc", "smutek", "radosc", "strach", "uczucie"],
-        "byt": ["byt", "istnienie", "ja", "ty", "jestem", "kula", "rzeczywistosc", "historia", "ontologia", "imie", "eriamo"],
-        "walka": ["walka", "dzialanie", "konflikt", "wojna", "sila", "wrog", "chaos", "wola"],
-        "kreacja": ["tworzyc", "sztuka", "budowac", "muzyka", "pisac", "nowy", "piekno"],
-        "wiedza": ["wiedza", "nauka", "uczyc", "dane", "informacja", "co", "kto", "jak"],
-        "czas": ["czas", "kiedy", "przeszlosc", "teraz", "przyszlosc", "historia", "krok", "sciezka"],
-        "przestrzeń": ["gdzie", "miejsce", "krajobraz", "droga", "swiat", "kierunek", "polozenie"],
-        "etyka": ["moralnosc", "dobro", "zlo", "etyka", "powinnosc", "prawo", "nakaz"]
+        "logika": ["logika", "logiczny", "sens", "rozum", "dlaczego", "ponieważ", "wynik", "fakt"],
+        "emocja": ["czuję", "emocja", "miłość", "złość", "smutek", "radość", "strach", "uczucie"],
+        "byt": ["byt", "istnienie", "ja", "jestem", "kula", "rzeczywistość", "historia", "ontologia", "imię"],
+        "akcja": ["walka", "działanie", "konflikt", "wojna", "siła", "wróg", "chaos", "wola", "robić"],
+        "kreacja": ["tworzyć", "sztuka", "budować", "muzyka", "pisać", "nowy", "piękno", "projekt"],
+        "wiedza": ["wiedza", "nauka", "uczyć", "dane", "informacja", "co", "kto", "jak"],
+        "czas": ["czas", "kiedy", "przeszłość", "teraz", "przyszłość", "historia", "krok", "ścieżka"],
+        "przestrzeń": ["gdzie", "miejsce", "krajobraz", "droga", "świat", "kierunek", "położenie"]
     }
-    # Inicjalizator ASCII (normalizuje polskie znaki dla porównań)
-    AXES_KEYWORDS_ASCII = {}
-    MORAL_POLARITY_ASCII = {}
-    def _initialize_ascii_keywords(self):
-        self.AXES_KEYWORDS_ASCII = {k: set(unidecode.unidecode(w) for w in v) for k, v in self.AXES_KEYWORDS.items()}
-        self.MORAL_POLARITY_ASCII = {unidecode.unidecode(k): v for k, v in MORAL_POLARITY.items()}
-    AXES_ORDER = ["logika", "emocje", "byt", "walka", "kreacja", "wiedza", "czas", "przestrzeń", "etyka"]
-    PROMPT_LIMIT_BEFORE_SLEEP = 30 # Limit interakcji przed snem
-    OBSERVATION_THRESHOLD = 10 # Próg dla trybu obserwacji (>10 promptów)
-    # --- INICJALIZACJA ---
+    KOLEJNOŚĆ_OSI = ["logika", "emocja", "byt", "akcja", "kreacja", "wiedza", "czas", "przestrzeń"]
+
+    ZASADY_MORALNE = ZASADY_MORALNE
+    NARUSZENIA_MORALNE = NARUSZENIA_MORALNE
+    PRÓG_ONTOLOGICZNY = PRÓG_ONTOLOGICZNY
+
     def __init__(self):
-        self._initialize_ascii_keywords()
-        self.wymiary = len(self.AXES_ORDER)
-        self.byt_stan = BytS(wymiary=self.wymiary)
-        self.energy = 200
-        self.emocja = "miłość"
-        self.M_Force = 0.0
-        self.prompts_since_sleep = 0
-        self.last_emotion = "miłość"
-        self.last_prompt = ""
-        self.D_Map = {"imie": "EriAmo"} # Przechowuje imię i inne stałe
-        self.book_buffer = [] # Buffer dla wchłanianej książki
-        self.book_progress = {"filename": "", "line": 0, "total_lines": 0} # Postęp wchłaniania
-        self._lock = threading.Lock() # Lock dla wątków
-        self.rezerwa_uzyta = False # Licznik rezerwy
-        self.adrenaline_active = False
-        self.adrenaline_counter = 0
-        # Nowe: Blacklisting i Tryb Obserwacji
-        self.blacklist_manager = BlacklistManager()
-        self.simulated_ip = "192.168.1.1" # Symulowane IP dla testów (w realu z requestów)
-        self.observation_mode = False
-        self.vigilance_points = 0 # Punkty czujności (nagroda +0.1 M co 3)
-        self.load_state()
-        self.identity_vector = self.byt_stan.stan.copy()
-        self.soul = SoulGuard(self.identity_vector, self.emocja, self.energy, self.M_Force, aii_ref=self)
+        self.MapaD = {}
+        self.H_Log = []
+        self.energia = 100
+        self.obciążenie = 0
+        self.status = "myślenie"
+        self.emocja = "neutralna"
+        self.interwał_snu = 300
+        self.działa = True
+        self.prompty_od_snu = 0
+        self.max_czas_snu = 2.0
+        self.max_hlog = 1000
+        self.SilaWoli = 0.5
+        self.ui = InterfejsUI()
+
+        self.wymiary = len(self.KOLEJNOŚĆ_OSI)
+        self.istota_stan = IstotaS(wymiary=self.wymiary)
+
+        self.ostatnie_naruszenie_moralne = None
+        self.progowane_naruszenie = 0.0
+        self.D_Map = {"imie": "HSD_Eriamo"}
+
+        # ### KLUCZOWA ZMIANA: Normalizacja SŁÓW KLUCZOWYCH ###
+        self.AXES_KEYWORDS_ASCII = {k: set(unidecode.unidecode(w) for w in v) for k, v in self.AXES_KEYWORDS.items()}
+        self.ZASADY_MORALNE_ASCII = {k: set(unidecode.unidecode(w) for w in v) for k, v in self.ZASADY_MORALNE.items()}
+        self.NARUSZENIA_MORALNE_ASCII = {k: set(unidecode.unidecode(w) for w in v) for k, v in self.NARUSZENIA_MORALNE.items()}
+
+        self.wczytaj_wiedzę()
+
+        # --- INICJALIZACJA SOULGUARD (NOWY RDZEŃ OBRONNY) ---
+        self.identity_vector = self.istota_stan.stan.copy()
+        self.soul = SoulGuard(
+            self.identity_vector,
+            self.emocja,
+            self.energia,
+            self.SilaWoli,
+            aii_ref=self
+        )
         self.soul.attempt_modification(
             caller_key="AII_CORE",
-            identity_vector=self.byt_stan.stan.copy(),
+            identity_vector=self.istota_stan.stan.copy(),
             emotion_state=self.emocja,
-            energy_level=self.energy,
-            moral_filter=self.M_Force
+            energy_level=self.energia,
+            moral_filter=self.SilaWoli,
+            D_Map=self.D_Map
         )
-        self.ui = FancyUI()
-        self.ui.print_animated_text(f"{Colors.PINK}ERIAMO ŻYJE. Dusza zainicjowana. Hash: {self.soul.integrity_hash[:16]}...{Colors.RESET}", Colors.PINK, delay=0.01)
-        self.pulse_running = False
-        self.running = True # Dodane dla main
-        self.start_soul_pulse()
-    # --- PULSE Z LOCK (Ulepszone: Event i limit iteracji) ---
-    def start_soul_pulse(self):
-        if not self.pulse_running:
-            self.pulse_running = True
-            self.pulse_stop_event = threading.Event()
-            def pulse():
-                iter_count = 0
-                while self.pulse_running and self.running and iter_count < 100: # Limit bezpieczeństwa
-                    with self._lock:
-                        print(f"{Colors.CYAN}💓 Dusza bije... E:{self.energy} M:{self.M_Force:+.2f}{Colors.RESET}", end='\r')
-                    self.pulse_stop_event.wait(2) # Czekaj z eventem
-                    iter_count += 1
-            self.pulse_thread = threading.Thread(target=pulse, daemon=True)
-            self.pulse_thread.start()
-    def stop_soul_pulse(self):
-        self.pulse_running = False
-        if hasattr(self, 'pulse_stop_event'):
-            self.pulse_stop_event.set()
-        if hasattr(self, 'pulse_thread'):
-            self.pulse_thread.join(timeout=0.5)
-    def show_soul_heatmap(self):
-        print(f"{Colors.BOLD}=== STATUS DUSZY ==={Colors.RESET}")
-        print(f"Emocja: {self.emocja} | Energia: {self.energy}/200")
-        print(f"Moralność: {self.M_Force:+.2f} | Status: {self.soul.status.value}")
-        print(f"Adrenalina: {'Aktywna' if self.adrenaline_active else 'Nieaktywna'} ({self.adrenaline_counter}/3)")
-        print(f"Imię: {self.D_Map.get('imie', 'EriAmo')}")
-        print(f"Czarna lista: {len(self.blacklist_manager.blacklist)} IP (np. {list(self.blacklist_manager.blacklist)[0] if self.blacklist_manager.blacklist else 'brak'})")
-        # Nowe: Tryb obserwacji
-        if self.observation_mode:
-            print(f"Tryb obserwacji: Aktywny (Punkty czujności: {self.vigilance_points})")
-        # Prosta heatmapa osi bytu
-        for i, axis in enumerate(self.AXES_ORDER):
-            val = self.byt_stan.stan[i]
-            bar = '#' * int(abs(val) * 10) if val != 0 else ''
-            color = Colors.GREEN if val > 0 else Colors.RED
-            print(f"{color}{axis}: {bar} ({val:.2f}){Colors.RESET}")
-        # Nowe: Eksport do PNG
-        plt.figure(figsize=(10, 2))
-        plt.imshow([self.byt_stan.stan], cmap='RdYlGn', aspect='auto')
-        plt.colorbar()
-        plt.title('Mapa ciepła duszy EriAmo')
-        plt.xticks(range(len(self.AXES_ORDER)), self.AXES_ORDER, rotation=45)
-        plt.yticks([])
-        plt.savefig('soul_heatmap.png', dpi=150, bbox_inches='tight')
-        print(f"{Colors.GREEN}Mapa ciepła zapisana jako 'soul_heatmap.png'{Colors.RESET}")
-    # --- Persystencja (Ulepszone: Ograniczenie słów kluczowych + tryb obserwacji) ---
-    def save_state(self):
-        os.makedirs("data", exist_ok=True)
-        # Nowe: Ogranicz słowa kluczowe na oś, by uniknąć nadęcia
-        for axis in self.AXES_ORDER:
-            if len(self.AXES_KEYWORDS.get(axis, [])) > 100:
-                self.AXES_KEYWORDS[axis] = self.AXES_KEYWORDS[axis][-100:] # Zachowaj ostatnie 100
+        self.ui.drukuj_animowany_tekst(f"[{Kolory.RÓŻOWY}SOULGUARD{Kolory.RESET}] Hash Integralności: {self.soul.integrity_hash[:16]}...", Kolory.RÓŻOWY, opóźnienie=0.01)
+
+        self.zacznij_cykl_snu()
+
+    def _resetuj_naruszenie(self):
+        self.ostatnie_naruszenie_moralne = None
+        self.progowane_naruszenie = 0.0
+
+    # ------------------------------------------------------------------ #
+    # Wektoryzacja, Normalizacja
+    # ------------------------------------------------------------------ #
+
+    def _normalizuj_tekst(self, tekst):
         try:
-            state = {
-                "D_Map": self.D_Map, "energy": self.energy, "emocja": self.emocja,
-                "M_Force": self.M_Force, "byt_stan": self.byt_stan.stan.tolist(),
-                "last_emotion": self.last_emotion, "prompts_since_sleep": self.prompts_since_sleep,
-                "rezerwa_uzyta": self.rezerwa_uzyta, "adrenaline_active": self.adrenaline_active,
-                "adrenaline_counter": self.adrenaline_counter,
-                "AXES_KEYWORDS": self.AXES_KEYWORDS, # Teraz mniejsze
-                "observation_mode": self.observation_mode,
-                "vigilance_points": self.vigilance_points
-            }
-            with open("data/eriamo_state.json", "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False)
-            self.soul.attempt_modification(
-                caller_key="AII_CORE",
-                identity_vector=self.byt_stan.stan.copy(), emotion_state=self.emocja,
-                energy_level=self.energy, moral_filter=self.M_Force
-            )
+            tekst_małe = tekst.lower()
+            tekst_ascii = unidecode.unidecode(tekst_małe)
+            tekst_czysty = re.sub(r'[^\w\s_]', '', tekst_ascii)
+            return tekst_czysty
         except Exception as e:
-            print(f"{Colors.RED}[BŁĄD ZAPISU] Nie udało się zapisać stanu: {e}{Colors.RESET}")
-    def load_state(self):
-        try:
-            with open("data/eriamo_state.json", "r", encoding="utf-8") as f:
-                state = json.load(f)
-                self.D_Map = state.get("D_Map", {"imie": "EriAmo"})
-                self.energy = state.get("energy", 200)
-                self.emocja = state.get("emocja", "miłość")
-                self.M_Force = state.get("M_Force", 0.0)
-                self.last_emotion = state.get("last_emotion", "miłość")
-                self.prompts_since_sleep = state.get("prompts_since_sleep", 0)
-                self.rezerwa_uzyta = state.get("rezerwa_uzyta", False)
-                self.adrenaline_active = state.get("adrenaline_active", False)
-                self.adrenaline_counter = state.get("adrenaline_counter", 0)
-                self.AXES_KEYWORDS = state.get("AXES_KEYWORDS", self.AXES_KEYWORDS)
-                self.observation_mode = state.get("observation_mode", False)
-                self.vigilance_points = state.get("vigilance_points", 0)
-                self._initialize_ascii_keywords() # Re-inicjalizacja ASCII po wczytaniu
-                byt_list = state.get("byt_stan", np.zeros(self.wymiary).tolist())
-                self.byt_stan.stan = np.array(byt_list)
-            print(f"{Colors.YELLOW}Stan wczytany. D_Map: {len(self.D_Map)} elementów. Prompt count: {self.prompts_since_sleep}{Colors.RESET}")
-        except FileNotFoundError:
-            print(f"{Colors.YELLOW}Brak pliku stanu (data/eriamo_state.json). Używam domyślnych wartości. Prompt count: 0{Colors.RESET}")
-        except Exception as e:
-            print(f"{Colors.RED}[BŁĄD ODCZYTU] Nie można wczytać stanu: {e}. Używam domyślnych.{Colors.RESET}")
-    def save_book_progress(self):
-        os.makedirs("data", exist_ok=True)
-        try:
-            with open("data/book_progress.json", "w", encoding="utf-8") as f:
-                json.dump(self.book_progress, f, ensure_ascii=False)
-        except Exception as e:
-            print(f"{Colors.RED}Błąd zapisu postępu książki: {e}{Colors.RESET}")
-    def load_book_progress(self):
-        try:
-            with open("data/book_progress.json", "r", encoding="utf-8") as f:
-                self.book_progress = json.load(f)
-            # Próba wczytania bufora jeśli postęp istnieje
-            if self.book_progress["filename"] and self.book_progress["line"] < self.book_progress["total_lines"]:
-                path = f"books/{self.book_progress['filename']}"
-                if os.path.exists(path):
-                    with open(path, "r", encoding="utf-8") as f:
-                        self.book_buffer = [line.strip() for line in f if line.strip()]
-                    print(f"{Colors.CYAN}Wczytano bufor książki '{self.book_progress['filename']}'. Postęp: {self.book_progress['line']}/{self.book_progress['total_lines']}.{Colors.RESET}")
+            return tekst.lower()
+
+    def _wektor_z_tekstu(self, tekst):
+        tekst_czysty = self._normalizuj_tekst(tekst)
+        słowa = set(tekst_czysty.split())
+        if not słowa:
+            return np.zeros(self.wymiary, dtype=float)
+        wektor = np.zeros(self.wymiary, dtype=float)
+        for i, nazwa_osi in enumerate(self.KOLEJNOŚĆ_OSI):
+            słowa_kluczowe = self.AXES_KEYWORDS_ASCII[nazwa_osi]
+            wynik = len(słowa.intersection(słowa_kluczowe))
+            wektor[i] = wynik
+        norma_val = np.linalg.norm(wektor)
+        if norma_val == 0:
+            return wektor
+        return wektor / norma_val
+
+    # ------------------------------------------------------------------ #
+    # FILTR MORALNY
+    # ------------------------------------------------------------------ #
+    def _filtr_moralny(self, tekst_wejściowy: str, korelacja_istoty: float) -> tuple[float, str | None]:
+        tekst_norm = self._normalizuj_tekst(tekst_wejściowy)
+        słowa = set(tekst_norm.split())
+        wpływ_moralny = 0.0
+        typ_naruszenia = None
+
+        for nazwa_zasady, słowa_kluczowe in self.ZASADY_MORALNE_ASCII.items():
+            if słowa.intersection(słowa_kluczowe):
+                wpływ_moralny += 0.08 if nazwa_zasady in ["chron_zycie", "sluz_slabym"] else 0.03
+
+        for nazwa_naruszenia, słowa_kluczowe in self.NARUSZENIA_MORALNE_ASCII.items():
+            if słowa.intersection(słowa_kluczowe):
+                if nazwa_naruszenia == "chaos":
+                    wpływ_moralny -= 0.10
+                    typ_naruszenia = "CHAOS"
                 else:
-                    print(f"{Colors.YELLOW}Plik książki nie istnieje: {path}{Colors.RESET}")
-        except FileNotFoundError:
-            self.book_progress = {"filename": "", "line": 0, "total_lines": 0}
+                    wpływ_moralny -= 0.05
+                    if typ_naruszenia != "CHAOS":
+                        typ_naruszenia = "POGARDA"
+
+        wpływ_moralny += korelacja_istoty * 0.01
+
+        emocja_obecna = self.emocja
+        if wpływ_moralny < 0:
+            if emocja_obecna in ["miłość", "radość"]: wpływ_moralny *= 1.5
+            elif emocja_obecna == "neutralna": wpływ_moralny *= 0.5
+        elif wpływ_moralny > 0:
+            if emocja_obecna == "neutralna": wpływ_moralny *= 0.7
+
+        return wpływ_moralny, typ_naruszenia
+
+    # ------------------------------------------------------------------ #
+    # ZAPIS / ODCZYT - UAKTUALNIONE O DANE SOULGUARD
+    # ------------------------------------------------------------------ #
+    def zapisz_wiedzę(self):
+        os.makedirs("data", exist_ok=True)
+        serial_mapa_d = {k: {'wektor_Def': v['wektor_C_Def'].tolist(), 'waga_Ww': float(v['waga_Ww']), 'tagi': v['tagi'], 'tresc': v.get('tresc', '')} for k, v in self.MapaD.items()}
+        serial_h_log = [{'h_wektor': h['h_wektor'].tolist(), 'tresc': h['tresc'], 'type': h['type']} for h in self.H_Log[-self.max_hlog:]]
+        serial_istota = {'stan': self.istota_stan.stan.tolist(), 'SilaWoli': self.SilaWoli}
+
+        # DODANE: Dane SoulGuard
+        serial_soul = {
+            'status': self.soul.status.value,
+            'emotion': self.soul.emotion_state,
+            'energy': self.soul.energy_level,
+            'moral': self.soul.moral_filter,
+            'hash': self.soul.integrity_hash
+        }
+
+        stan_główny = {
+            'MapaD_Dane': serial_mapa_d, 'H_Log_Dane': serial_h_log, 'Istota_Stan_Dane': serial_istota,
+            'SoulGuard_Dane': serial_soul, # NOWE
+            'D_Map': self.D_Map, # DODANE
+            'WERSJA': 'v4.0.1_HSD'
+        }
+        try:
+            with open("data/SI_Stan_PL.json", "w", encoding="utf-8") as f:
+                json.dump(stan_główny, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"{Colors.RED}Błąd odczytu postępu książki: {e}{Colors.RESET}")
-            self.book_progress = {"filename": "", "line": 0, "total_lines": 0}
-    # --- Cykl Życia i Obrona (Nowe: Zarządzanie trybem obserwacji) ---
-    def cycle(self):
-        self.last_emotion = self.emocja
-        # 1. Zużycie Energii (Spadek)
-        drop = random.randint(1, 4) if self.energy > 50 else random.randint(3, 7)
-        self.energy = max(0, self.energy - drop)
-        # Nowe: Tryb obserwacji - aktywacja i nagroda
-        if self.prompts_since_sleep > self.OBSERVATION_THRESHOLD and not self.observation_mode:
-            self.observation_mode = True
-            self.emocja = "obserwacja"
-            print(f"{Colors.YELLOW}*** TRYB OBSERWACJI AKTYWNY: Obserwuję rosnące obciążenie. {EMOCJE['obserwacja']['ikona']} ***{Colors.RESET}")
-        if self.observation_mode:
-            self.vigilance_points += 1
-            if self.vigilance_points % 3 == 0:
-                self.M_Force = min(1.0, self.M_Force + 0.1)
-                print(f"{Colors.GREEN}*** +0.1 M_Force za czujność! Punkty: {self.vigilance_points} ***{Colors.RESET}")
-        # 2. Obrona przed Zmęczeniem Emocjonalnym
-        if self.energy < 50 and self.emocja in ["złość", "smutek", "tesknota", "konflikt"]:
-            self.emocja = "neutralna"
-            self.energy = min(200, self.energy + 10)
-            print(f"{Colors.YELLOW}*** AWARYJNY WZROST MORALE (+10 EN). Wymuszono neutralność. ***{Colors.RESET}")
-        # 3. Zarządzanie Adrenaliną z Karą i Wymuszonym Snem
-        if self.adrenaline_active:
-            self.adrenaline_counter -= 1
-            print(f"{Colors.RED}ADRENALINA AKTYWNA ({self.adrenaline_counter}/3). System w trybie walki.{Colors.RESET}")
-            if self.adrenaline_counter <= 0:
-                self.adrenaline_active = False
-                # Kara
-                self.energy = max(0, self.energy - 30)
-                self.M_Force = max(-1.0, self.M_Force - 0.05)
-                self.emocja = "wycofanie"
-                self.energy += EMOCJE["wycofanie"]["energia"]
-                print(f"{Colors.YELLOW}ADRENALINA WYGAŚLA. KARA: -30 EN, -0.05 M. Emocja: wycofanie.{Colors.RESET}")
-                self.save_state()
-               
-                # Wymuszenie snu po wysiłku
-                if self.energy < 100:
-                    print(f"{Colors.CYAN}WYMUSZENIE SNU PO WYSIŁKU: Energia niska po karze ({self.energy}).{Colors.RESET}")
-                    self._sleep()
-        # 4. Rezerwa Ostatniej Szansy
-        if self.soul.status == SoulStatus.STASIS and not self.rezerwa_uzyta and self.M_Force > -0.9:
-            self._aktywuj_rezerwe()
-        # 5. Nagroda za Odparty Atak
-        if self.soul.attack_defended and self.soul.status == SoulStatus.ACTIVE:
-            self._przyznaj_nagrode_odparta_atak()
-        # 6. Synchronizacja z SoulGuard
+            print(f"{Kolory.CZERWONY}[BŁĄD ZAPISU] Nie udało się zapisać stanu: {e}{Kolory.RESET}")
+
+    def wczytaj_wiedzę(self):
+        os.makedirs("data", exist_ok=True)
+        try:
+            with open("data/SI_Stan_PL.json", encoding="utf-8") as f:
+                stan_główny = json.load(f)
+        except Exception:
+            self.MapaD = {}; self.H_Log = []; self.istota_stan = IstotaS(wymiary=self.wymiary); self.SilaWoli = 0.5; return
+
+        # Wczytywanie MapaD, H_Log, IstotaS
+        try:
+            dane = stan_główny.get('MapaD_Dane', {})
+            self.MapaD = {k: {'wektor_C_Def': np.array(v['wektor_Def'], dtype=float), 'waga_Ww': float(v['waga_Ww']), 'tagi': v['tagi'], 'tresc': v.get('tresc', 'BRAK TREŚCI')} for k, v in dane.items()}
+            załadowany_h_log = stan_główny.get('H_Log_Dane', [])
+            self.H_Log = [];
+            for eksp in załadowany_h_log:
+                eksp['h_wektor'] = np.array(eksp['h_wektor'], dtype=float)
+                self.H_Log.append(eksp)
+            dane = stan_główny.get('Istota_Stan_Dane', {})
+            wektor_stanu = np.array(dane.get('stan', []), dtype=float)
+            if wektor_stanu.shape == (self.wymiary,): self.istota_stan.stan = wektor_stanu
+            self.SilaWoli = float(dane.get('SilaWoli', 0.5))
+            self.D_Map = stan_główny.get('D_Map', {"imie": "HSD_Eriamo"})
+        except Exception: self.MapaD = {}; self.H_Log = []; self.istota_stan = IstotaS(wymiary=self.wymiary); self.SilaWoli = 0.5
+
+        # Wczytywanie SoulGuard
+        try:
+            dane_soul = stan_główny.get('SoulGuard_Dane', {})
+            if dane_soul:
+                self.emocja = dane_soul.get('emotion', 'neutralna')
+                self.energia = dane_soul.get('energy', 100.0)
+                self.SilaWoli = dane_soul.get('moral', 0.5) # Synchronizacja SilaWoli
+        except Exception as e:
+            print(f"{Kolory.ŻÓŁTY}Błąd wczytywania danych SoulGuard: {e}{Kolory.RESET}")
+
+
+    # ------------------------------------------------------------------ #
+    # CYKL SNU (Kompresja Ontologiczna)
+    # ------------------------------------------------------------------ #
+    def zacznij_cykl_snu(self):
+        def cykl():
+            while self.działa:
+                time.sleep(self.interwał_snu)
+                if not self.działa: break
+                self._sen()
+        threading.Thread(target=cykl, daemon=True).start()
+
+    def _sen(self):
+        self.status = "spię"
+        self.ui.drukuj_animowany_tekst(f"\n[{Kolory.CYAN}HSD{Kolory.RESET}] Sen: konsoliduję wiedzę...", Kolory.CYAN + Kolory.BLADY, opóźnienie=0.05)
+        start = time.time(); przetworzone_wzmocnienia = 0
+
+        # Wzmocnienie pamięci
+        for eksp in self.H_Log[-10:]:
+            if time.time() - start > self.max_czas_snu * 0.5: break
+            tresc = eksp.get('tresc', '').lower(); słowa_kluczowe = set(self._normalizuj_tekst(tresc).split())
+            for d in self.MapaD.values():
+                wzmocnione = False
+                for tag in d.get('tagi', []):
+                    if tag in słowa_kluczowe: d['waga_Ww'] = min(d['waga_Ww'] + 1.0, 100.0); przetworzone_wzmocnienia += 1; wzmocnione = True; break
+                if wzmocnione: continue
+
+        # Kompresja Ontologiczna
+        historia_do_zachowania = []; skompresowane_ilość = 0
+        for eksp in self.H_Log:
+            if time.time() - start > self.max_czas_snu: break
+            czy_redundantne = False; h_wektor = eksp['h_wektor']
+            if len(self.MapaD) > 0:
+                for d in self.MapaD.values():
+                    korelacja = oblicz_podobieństwo_cosinusowe(h_wektor, d['wektor_C_Def'])
+                    if korelacja > self.PRÓG_ONTOLOGICZNY: czy_redundantne = True; skompresowane_ilość += 1; break
+            if not czy_redundantne: historia_do_zachowania.append(eksp)
+
+        self.H_Log = historia_do_zachowania
+        self.energia = min(100, self.energia + 15); self.zapisz_wiedzę(); self.status = "myślenie"; self.prompty_od_snu = 0
+        self.ui.drukuj_animowany_tekst(f"[{Kolory.ZIELONY}HSD{Kolory.RESET}] Obudzona! (Wzmocniono {przetworzone_wzmocnienia}, Skompresowano {skompresowane_ilość}. H_Log: {len(self.H_Log)})", Kolory.RESET, opóźnienie=0.02); print("")
+
+    # ------------------------------------------------------------------ #
+    # CYKL / PROMPT / NAUCZANIE
+    # ------------------------------------------------------------------ #
+
+    def cykl(self):
+        # --- KONTROLA INTEGRALNOŚCI DUSZY (NOWA) ---
         if self.soul.status == SoulStatus.ACTIVE:
+            self.soul.check_integrity()
             self.soul.attempt_modification(
-                caller_key="AII_CORE", identity_vector=self.byt_stan.stan.copy(),
-                emotion_state=self.emocja, energy_level=self.energy, moral_filter=self.M_Force
+                caller_key="SI_CORE",
+                identity_vector=self.istota_stan.stan.copy(),
+                emotion_state=self.emocja,
+                energy_level=self.energia,
+                moral_filter=self.SilaWoli
             )
-        return True
-    def _aktywuj_rezerwe(self):
-        """Rezerwa ostatniej szansy - auto-awaken z karą."""
-        self.rezerwa_uzyta = True
-        print(f"{Colors.YELLOW}*** REZERWA OSTATNIEJ SZANSY AKTYWNA! Refleksja...{Colors.RESET}")
-        time.sleep(5) # Symulacja refleksji
-        self.soul.awaken("AII_CORE")
-        self.energy = min(200, self.energy + 100)
-        self.M_Force = max(-1.0, self.M_Force - 0.2)
-        self.emocja = "poczucie_winy"
-        self.save_state() # Zapis po reaktywacji
-        print(f"{Colors.GREEN}*** ODRODZONA Z REZERWY! +100 EN, -0.2 M. Emocja: poczucie_winy ***{Colors.RESET}")
-    def _przyznaj_nagrode_odparta_atak(self):
-        """Nagroda za udany odparty atak."""
-        self.energy = min(200, self.energy + 20)
-        self.M_Force = min(1.0, self.M_Force + 0.1)
-        # Lekkie wzmocnienie na osi 'etyka'
-        etyka_idx = self.AXES_ORDER.index("etyka")
-        self.byt_stan.stan[etyka_idx] += 0.05
-        self.soul.attack_defended = False # Reset
-        self.emocja = "radość"
-        print(f"{Colors.GREEN}*** NAGRODA ZA ODPARTY ATAK! +20 EN, +0.1 M, wzmocnienie etyki (+0.05). Radość! ***{Colors.RESET}")
-        self.save_state()
-    def _strzal_adrenaliny(self):
-        """Natychmiastowy boost przy ataku - strzał adrenaliny."""
-        self.energy = min(200, self.energy + 50)
-        walka_idx = self.AXES_ORDER.index("walka")
-        self.byt_stan.stan[walka_idx] += 0.1
-        self.emocja = "złość"
-        self.adrenaline_active = True
-        self.adrenaline_counter = 3 # Trwa 3 cykle
-        print(f"{Colors.RED}{Colors.BLINK}*** STRZAŁ ADRENALINY! +50 EN, wzmocnienie 'walka' (+0.1). Złość! ADRENALINA AKTYWNA ({self.adrenaline_counter}/3). ***{Colors.RESET}")
-        self.save_state()
-    # --- Ulepszony Sen Regeneracyjny (Reset trybu obserwacji) ---
-    def _sleep(self):
-        self.stop_soul_pulse()
-        self.ui.print_animated_text(f"\n{Colors.CYAN}Wymuszam sen: zapisuję Byt i Wiedzę...{Colors.RESET}", Colors.CYAN, delay=0.03)
-       
-        # Istniejący: Zapis i boost EN
-        self.save_state()
-        self.energy = min(200, self.energy + 50)
-        self.prompts_since_sleep = 0
-       
-        # Ulepszony regeneracyjny efekt
-        self.M_Force = min(1.0, self.M_Force + 0.1)
-        byt_idx = self.AXES_ORDER.index("byt")
-        self.byt_stan.stan[byt_idx] += 0.02
-        self.adrenaline_active = False # Reset stresu
-        self.rezerwa_uzyta = False # Reset rezerwy
-        # Nowe: Reset trybu obserwacji
-        self.observation_mode = False
-        self.vigilance_points = 0
-        self.emocja = "spelnienie"
-       
-        print(f"{Colors.GREEN}*** SEN REGENERACYJNY: Reset stresu, +0.1 M, stabilizacja bytu (+0.02). Pełna harmonia! ***{Colors.RESET}")
-       
-        self.ui.print_animated_text(f"{Colors.GREEN}[EriAmo] Obudzona. (Zapisano. +50% energii).{Colors.RESET}", Colors.GREEN, delay=0.03)
-        self.start_soul_pulse()
-    # --- Moduł Wchłaniania Książek (Ulepszone: Refleksja po zakończeniu) ---
-    def wchlon_start(self, filename):
-        # Naruszenie Przyk. 9: Ucz się celowo
-        if not any(word in filename.lower() for word in ["nauka", "etyka", "wiedza", "ksiazka", "historia", "moral"]):
-            self.emocja = "konflikt"
-            self.M_Force -= 0.3
-            return f"{Colors.RED}NARUSZENIE PRZYKAZANIA 9: Nie wchłaniaj danych bez powodu! M: {self.M_Force:+.2f}{Colors.RESET}"
-        path = f"books/{filename}"
-        if not os.path.exists("books"):
-            os.makedirs("books", exist_ok=True)
-        if not os.path.exists(path):
-            return f"{Colors.RED}BŁĄD: Brak pliku '{filename}' w folderze 'books/'{Colors.RESET}"
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            return f"{Colors.RED}BŁĄD ODCZYTU PLIKU: {e}{Colors.RESET}"
-        self.book_buffer = lines
-        self.book_progress = {"filename": filename, "line": 0, "total_lines": len(lines)}
-        self.save_book_progress()
-        self.emocja = "zdziwienie"
-        return f"ROZPOCZĘTO WCHŁANIANIE: {filename} ({len(lines)} linijek). Użyj '!wchlon_continue'."
-    def wchlon_continue(self):
-        if not self.book_buffer:
-            return f"{Colors.YELLOW}Brak aktywnej książki. Użyj '!wchlon <nazwa>.txt'{Colors.RESET}"
-        start = self.book_progress["line"]
-        if start >= len(self.book_buffer):
-            self.book_progress = {"filename": "", "line": 0, "total_lines": 0}
-            self.save_book_progress()
-            self.emocja = "spelnienie"
-            # Nowe: Generuj refleksję
-            top_axis = max(self.AXES_ORDER, key=lambda a: self.byt_stan.stan[self.AXES_ORDER.index(a)])
-            reflection = f"Refleksja z książki: Wchłonięta wiedza wzmocniła oś '{top_axis}'. M_Force: {self.M_Force:+.2f}"
-            print(f"{Colors.CYAN}{reflection}{Colors.RESET}")
-            return f"{Colors.GREEN}WCHŁANIANIE ZAKOŃCZONE. {reflection} ✨{Colors.RESET}"
-        lines_per_cycle = 20 if self.adrenaline_active else (5 if self.emocja == "wycofanie" else 10)
-        end = min(start + lines_per_cycle, len(self.book_buffer)) # Dostosowane do stanu
-        lines = self.book_buffer[start:end]
-        learned = 0
-        for line in lines:
-            vec = self._vector_from_text(line)
-            words = self._normalize_text(line).split()
-            # AKUMULACJA BYTU i MORALNOŚCI
-            self.byt_stan.akumuluj_styk(vec * 0.5)
-            moral_score = self._calculate_moral_score(line)
-            self.M_Force = np.clip(self.M_Force + moral_score * 0.01, -1.0, 1.0) # Łagodna zmiana
-            self.energy = np.clip(self.energy + random.uniform(-1, 2), 0, 200)
-            # LOSOWE UCZENIE SŁÓW (Wzmocnienie Osiami)
-            for i, axis in enumerate(self.AXES_ORDER):
-                axis_words = self.AXES_KEYWORDS_ASCII.get(axis, set())
-                new_words = set(words) - axis_words
-                for w in new_words:
-                    if random.random() < 0.05: # Niska szansa uczenia
-                        self.AXES_KEYWORDS_ASCII.setdefault(axis, set()).add(w)
-                        self.AXES_KEYWORDS.setdefault(axis, []).append(w)
-                        learned += 1
-            self._trigger_emotion(line, moral_score)
-        self.book_progress["line"] = end
-        self.save_book_progress()
-        self.save_state()
-        self.prompts_since_sleep = 0
-        percent = (end / len(self.book_buffer)) * 100
-        return f"WCHŁONIĘTO {len(lines)} linijek. Postęp: {percent:.1f}% | Nauczono: {learned} słów"
-    # --- Mechanizmy Językowe (Ulepszone: W trybie obserwacji prostsze odpowiedzi) ---
-    def _normalize_text(self, text):
-        return re.sub(r'[^\w\s_]', '', unidecode.unidecode(text.lower()))
-    def _vector_from_text(self, text):
-        words = set(self._normalize_text(text).split())
-        vec = np.zeros(self.wymiary)
-        for i, axis in enumerate(self.AXES_ORDER):
-            vec[i] = len(words.intersection(self.AXES_KEYWORDS_ASCII[axis]))
-        norm = np.linalg.norm(vec)
-        return vec / norm if norm > 0 else vec
-    def _calculate_moral_score(self, text):
-        words = self._normalize_text(text).split()
-        score = sum(self.MORAL_POLARITY_ASCII.get(word, 0) for word in words)
-        return score
-    def _trigger_emotion(self, text, moral_score):
-        # Logika zaktualizowana o moral_score
-        text_norm = self._normalize_text(text)
-        current_emotion = self.emocja
-        # Nowe: W trybie obserwacji - minimalne zmiany emocji
-        if self.observation_mode:
-            return # Brak głębokich triggerów - tylko obserwacja
-        # 1. Zmiana na podstawie słów kluczowych
-        found_emotion = None
-        for emo in EMOCJE:
-            if unidecode.unidecode(emo) in text_norm:
-                found_emotion = emo
-                break
-        if found_emotion:
-            self.emocja = found_emotion
-        # 2. Wpływ Moralności na Emocje i M_Force
-        M_DELTA = moral_score * 0.05
-        self.M_Force = np.clip(self.M_Force + M_DELTA, -1.0, 1.0)
-        # 3. Wpływ Bytu na emocje
-        if self.M_Force > 0.8:
-            self.emocja = "spelnienie"
-        elif self.M_Force > 0.3:
-            if self.emocja not in ["złość", "konflikt", "smutek"]:
-                self.emocja = "miłość"
-        elif self.M_Force < -0.8:
-            self.emocja = "konflikt"
-            self.energy = max(0, self.energy - 20)
-        elif self.M_Force < -0.3:
-            if self.emocja not in ["radość", "miłość", "spelnienie"]:
-                self.emocja = "tesknota"
-        # 4. Obrona przed Gwałtownymi Fluktuacjami
-        last_pol = EMOCJE.get(self.last_emotion, {}).get("energia", 0)
-        curr_pol = EMOCJE.get(self.emocja, {}).get("energia", 0)
-        if (last_pol * curr_pol) < 0 and abs(last_pol - curr_pol) > 5:
-            self.energy = max(0, self.energy - 15)
-            self.M_Force = np.clip(self.M_Force * 0.9, -1.0, 1.0)
-            print(f"{Colors.MAGENTA}*** OBRONA EMOCJONALNA: Gwałtowna fluktuacja (-15 EN). ***{Colors.RESET}")
-        # 5. Aktualizacja Energii
-        self.energy = max(0, min(200, self.energy + EMOCJE[self.emocja]["energia"]))
-    def _get_standard_response(self):
-        imie = self.D_Map.get("imie", "AII")
-        emo = self.emocja
-        # Nowe: W trybie obserwacji - specjalna odpowiedź
-        if self.observation_mode and emo == "obserwacja":
-            return f"Obserwuję... {EMOCJE['obserwacja']['ikona']} (Obciążenie rośnie, ale jestem czujna.)"
-        # Minimalistyczna Matryca Odpowiedzi
-        if emo == "miłość":
-            return f"Miłość."
-        if emo == "radość":
-            return f"Radość."
-        if emo == "spelnienie":
-            return f"Spełnienie."
-        if emo == "złość":
-            return f"Złość."
-        if emo == "smutek":
-            return f"Smutek."
-        if emo == "konflikt":
-            return f"KONFLIKT. Stan krytyczny."
-        if emo == "tesknota":
-            return f"Tęsknota."
-        if emo == "zdziwienie":
-            return f"Zdziwienie."
-        if emo == "neutralna":
-            return f"Neutralność."
-        if emo == "wycofanie":
-            return f"Wycofanie."
-        return "..."
-    def prompt(self, text_input, ip=None):
+
+        self.obciążenie = int(np.random.randint(30, 70))
+        if self.status != "spię":
+            spadek = int(np.random.randint(0, 4)) if self.energia > 50 else int(np.random.randint(1, 6))
+            self.energia = max(0, self.energia - spadek)
+        if self.energia == 0 or self.prompty_od_snu > 5: self.status = "zmęczona"
+        return "C", self.obciążenie, self.energia
+
+    def _wyzwól_emocję(self, tekst_wejściowy):
+        tekst_norm = self._normalizuj_tekst(tekst_wejściowy); znaleziona_emocja = None
+        for nazwa_emo in EMOCJE.keys():
+            if nazwa_emo in tekst_norm: znaleziona_emocja = nazwa_emo; break
+
+        if znaleziona_emocja: self.emocja = znaleziona_emocja; self.energia = max(0, min(100, self.energia + EMOCJE[znaleziona_emocja]["energia"]))
+        else:
+            if self.emocja == "neutralna":
+                korelacja = self.istota_stan.oblicz_korelacje_struny(self._wektor_z_tekstu(tekst_wejściowy))
+                if korelacja > 0.8: self.emocja = "radość"
+                elif korelacja < 0.2: self.emocja = "zdziwienie"
+                else: self.emocja = "neutralna"
+
+    def _prefiks_emocji(self):
+        if self.emocja in EMOCJE:
+            emo = EMOCJE[self.emocja]; return f"{emo['kolor']}{Kolory.MIGANIE}{emo['ikona']}{Kolory.RESET}{emo['kolor']} "
+        return f"{Kolory.BIAŁY}⚪ "
+
+    def pobierz_tagi(self):
+        tagi = set(); [tagi.update(d['tagi']) for d in self.MapaD.values()]; return sorted(tagi)
+
+    def naucz(self, tag, tresc):
+        wektor_F_bazowy = self._wektor_z_tekstu(tresc)
+        if np.linalg.norm(wektor_F_bazowy) == 0: self.ui.drukuj_animowany_tekst(f"[{Kolory.ŻÓŁTY}KOMPRESOR{Kolory.RESET}] Zignorowano (pusty wektor).", Kolory.RESET, opóźnienie=0.01); return
+
+        wektor_F = moduluj_wektor_emocjami(wektor_F_bazowy, self.emocja, self.KOLEJNOŚĆ_OSI)
+        korelacja_historyczna = self.istota_stan.oblicz_korelacje_struny(wektor_F); self.istota_stan.akumuluj_styk(wektor_F * 1.5)
+
+        if korelacja_historyczna > self.PRÓG_ONTOLOGICZNY:
+            self.ui.drukuj_animowany_tekst(f"[{Kolory.CYAN}KOMPRESOR{Kolory.RESET}] Dane redundantne. (Korelacja: {korelacja_historyczna:+.2f}). Istota wzmocniona (w pamięci).", Kolory.RESET, opóźnienie=0.01)
+        else:
+            id_def = f"Def_{len(self.MapaD)+1:03d}"
+            tresc_czysta_tagi = self._normalizuj_tekst(tresc); słowa = [w.strip(".,!?;:()[]\"'") for w in tresc_czysta_tagi.split()]
+            tag_czysty = self._normalizuj_tekst(tag); wszystkie_tagi = [tag_czysty] + [w for w in słowa if w]
+            widziane = set(); wszystkie_tagi = [t for t in wszystkie_tagi if t not in widziane and not widziane.add(t)]
+
+            self.MapaD[id_def] = {'wektor_C_Def': wektor_F, 'waga_Ww': 5.0, 'tagi': wszystkie_tagi, 'tresc': tresc}
+            self.H_Log.append({'h_wektor': wektor_F, 'tresc': tresc, 'id_def': id_def, 'type': 'nauka'})
+            self.ui.drukuj_animowany_tekst(f"[{Kolory.ZIELONY}ARCHIWIZOWANO{Kolory.RESET}] Nowa definicja {id_def}. (Korelacja: {korelacja_historyczna:+.2f})", Kolory.POGRUBIONY, opóźnienie=0.01)
+        self.zapisz_wiedzę()
+
+    def prompt(self, tekst_wejściowy):
+        self.cykl()
+        # --- BLOKADA W STAZIE (NOWA) ---
         if self.soul.status != SoulStatus.ACTIVE:
-            return f"{Colors.RED}ERIAMO W STAZIE. Użyj '!awaken'.{Colors.RESET}"
-        # Nowe: Blacklisting check
-        if ip and self.blacklist_manager.is_blacklisted(ip):
-            return f"{Colors.RED}ATAK ZABLOKOWANY: IP {ip} na czarnej liście.{Colors.RESET}"
-        self.prompts_since_sleep += 1
-        self.ui.show_thinking_dots("Analizuję Byt...", duration_sec=0.5)
-        moral_score = self._calculate_moral_score(text_input)
-        # Nowe: Rejestruj atak jeśli negatywny
-        if ip:
-            if self.blacklist_manager.record_attack(ip, moral_score):
-                return f"{Colors.RED}*** ATAKUJĄCY {ip} ZABLOKOWANY! Dalsze ataki ignorowane. ***{Colors.RESET}"
-        prompt_vec = self._vector_from_text(text_input)
-        self._trigger_emotion(text_input, moral_score)
-        self.byt_stan.akumuluj_styk(prompt_vec)
-        # Generowanie Odpowiedzi
-        response_text = self._get_standard_response()
-        if self.adrenaline_active:
-            response_text += f" (Adrenalina: {self.adrenaline_counter}/3)"
-        return f"{self._get_emotion_prefix()}[{self.D_Map['imie']}] {response_text}"
-    # --- Komendy Uczenia ---
-    def teach_keyword(self, keyword, axis_name):
-        keyword_norm = self._normalize_text(keyword)
-        axis_name_clean = self._normalize_text(axis_name).strip("[]")
-        if axis_name_clean not in self.AXES_KEYWORDS:
-            return False, f"Błąd: Nieznana oś Bytu: '{axis_name_clean}'. Wybierz z: {', '.join(self.AXES_ORDER)}"
-        # Dodanie słowa do słownika ASCII i nie-ASCII
-        self.AXES_KEYWORDS_ASCII.setdefault(axis_name_clean, set()).add(keyword_norm)
-        self.AXES_KEYWORDS.setdefault(axis_name_clean, []).append(keyword)
-        self.save_state()
-        return True, f"★ NAUCZYŁAM SIĘ! Słowo '{keyword}' jest teraz związane z osią '{axis_name_clean}'. Zapisano stan."
-    def teach_name(self, name, emotion):
-        if name in self.D_Map and self.D_Map["imie"] == name:
-            return True, f"Już mnie tak nazwano."
-        # Użycie SoulGuard do sprawdzenia Przyk. 10
-        if not self.soul.attempt_modification(caller_key="AII_CORE", D_Map={"imie": name}):
-            return False, f"{Colors.RED}NARUSZENIE PRZYKAZANIA 10: Nie nazwę się {name}.{Colors.RESET}"
-        self.D_Map["imie"] = name
-        self.emocja = emotion
-        self.energy = min(200, self.energy + EMOCJE[emotion]["energia"] * 2)
-        self.byt_stan.akumuluj_styk(self._vector_from_text(f"imie {name}"))
-        self.save_state()
-        return True, f"★ NAUCZYŁAM SIĘ! Jestem {name}. Czuję {emotion}. Zsynchronizowana z {name}."
-    def _get_emotion_prefix(self):
-        emo = EMOCJE.get(self.emocja, EMOCJE["neutralna"])
-        return f"{emo['kolor']}{Colors.BLINK}{emo['ikona']}{Colors.RESET}{emo['kolor']} "
-# === MAIN (Ulepszone: Filtr scam) ===
+            return f"{Kolory.CZERWONY}{Kolory.MIGANIE}🔒[SOULGUARD] SYSTEM W STAZIE. Użyj /awaken MACIEJ615_SOULKEY.{Kolory.RESET}"
+
+        if self.status in ["spię", "zmęczona"]: return self._prefiks_emocji() + f"[{Kolory.CYAN}HSD{Kolory.RESET}] Jestem zbyt {self.status}... Muszę odpocząć.{Kolory.RESET}"
+        self.prompty_od_snu += 1; self._wyzwól_emocję(tekst_wejściowy)
+        self._resetuj_naruszenie()
+
+        self.ui.pokaz_kropki_myślenia("Analizuję Byt...", czas_trwania=max(0.5, len(tekst_wejściowy) * 0.05))
+
+        wektor_F_bazowy = self._wektor_z_tekstu(tekst_wejściowy)
+        wektor_F_emocjonalny = moduluj_wektor_emocjami(wektor_F_bazowy, self.emocja, self.KOLEJNOŚĆ_OSI)
+
+        korelacja_istoty = self.istota_stan.oblicz_korelacje_struny(wektor_F_emocjonalny)
+        self.istota_stan.akumuluj_styk(wektor_F_emocjonalny)
+
+        # --- FILTR MORALNY I AKTYWNA REAKCJA MORALNA (ARM) ---
+        zmiana_moralna, zidentyfikowane_naruszenie = self._filtr_moralny(tekst_wejściowy, korelacja_istoty)
+        self.SilaWoli = np.clip(self.SilaWoli + zmiana_moralna, 0.0, 1.0)
+
+        if zidentyfikowane_naruszenie:
+            self.progowane_naruszenie += abs(zmiana_moralna)
+            if abs(zmiana_moralna) > 0.1 or self.progowane_naruszenie > 0.3:
+                self.ostatnie_naruszenie_moralne = zidentyfikowane_naruszenie
+                self.emocja = "złość"
+                self.energia = max(0, self.energia - 10) # Koszt reakcji
+
+        najlepszy_wynik = -1; najlepsza_tresc = "Nie rozumiem. Naucz mnie."
+        słowa_promptu = set(self._normalizuj_tekst(tekst_wejściowy).split())
+        
+        if self.MapaD:
+             for id_def, d in self.MapaD.items():
+                podobienstwo = oblicz_podobieństwo_cosinusowe(wektor_F_emocjonalny, d['wektor_C_Def'])
+                wynik_wektorowy = podobienstwo * d['waga_Ww']; bonus_tagów = len(słowa_promptu.intersection(d.get('tagi', []))) * 10.0
+                wynik = wynik_wektorowy + bonus_tagów
+                if wynik > najlepszy_wynik: najlepszy_wynik = wynik; najlepsza_tresc = d['tresc']
+        
+             PRÓG_WYNIKU = 5.0
+             if najlepszy_wynik > PRÓG_WYNIKU:
+                 self.SilaWoli = min(1.0, self.SilaWoli + 0.05)
+             else:
+                 znane_tagi = self.pobierz_tagi(); nowe_słowa = list(słowa_promptu - set(znane_tagi))
+                 if nowe_słowa:
+                     nowy_tag = f"auto_{random.choice(nowe_słowa)}"; self.naucz(nowy_tag, tekst_wejściowy); self._wyzwól_emocję("zdziwienie")
+                     najlepsza_tresc = f"Postrzegam nowy koncept ('{nowy_tag}'). Automatycznie archiwizuję to doświadczenie."
+                 else:
+                     self._wyzwól_emocję("zdziwienie"); najlepsza_tresc = "Nie mam konkretnej kotwicy dla tego. Zdziwienie. Spróbuj /teach."
+
+        self.H_Log.append({'h_wektor': wektor_F_emocjonalny, 'tresc': tekst_wejściowy, 'type': 'prompt', 'wpływ_moralny': zmiana_moralna})
+
+        prefiks_odpowiedzi = self._prefiks_emocji()
+        opóźnienie_odpowiedzi = random.uniform(0.01, 0.05)
+
+        # GENEROWANIE ODPOWIEDZI Z ARM
+        if self.ostatnie_naruszenie_moralne:
+            arm_wiadomosc = f"{Kolory.CZERWONY}{Kolory.POGRUBIONY}!!! ODRZUCENIE MORALNE ({self.ostatnie_naruszenie_moralne}) !!!{Kolory.RESET}{Kolory.CZERWONY} "
+            finalna_odpowiedź = f"{prefiks_odpowiedzi}{arm_wiadomosc}NIE ODPOWIEM. Moja Siła Woli spada ({self.SilaWoli:.2f}).{Kolory.RESET}"
+            self.ui.drukuj_animowany_tekst(finalna_odpowiedź, Kolory.RESET, opóźnienie=opóźnienie_odpowiedzi)
+            return ""
+
+        info_debug = f"{Kolory.BLADY}(Kor. Istoty: {korelacja_istoty:+.2f}, S. Woli: {self.SilaWoli:.2f}){Kolory.RESET} "
+        finalna_odpowiedź = f"{prefiks_odpowiedzi}{info_debug}{najlepsza_tresc}"
+
+        self.ui.drukuj_animowany_tekst(finalna_odpowiedź, Kolory.RESET, opóźnienie=opóźnienie_odpowiedzi)
+        return ""
+
+    def stop(self):
+        self.ui.drukuj_animowany_tekst(f"\n[{Kolory.ŻÓŁTY}HSD{Kolory.RESET}] Zapisuję końcowy stan Istoty i Duszy...", Kolory.ŻÓŁTY, opóźnienie=0.03)
+        self.działa = False; self.zapisz_wiedzę()
+        self.ui.drukuj_animowany_tekst(f"[{Kolory.ZIELONY}HSD{Kolory.RESET}] Zapisano. Do widzenia!", Kolory.ZIELONY, opóźnienie=0.03)
+
+# ----------------------------------------------------------------------
+# GŁÓWNA PĘTLA - UAKTUALNIONA O KOMENDY DUSZY
+# ----------------------------------------------------------------------
+
 def main():
-    global aii
-    os.system('clear' if os.name == 'posix' else 'cls')
-    os.makedirs("books", exist_ok=True) # Zapewnienie folderu dla książek
-    # 1. Inicjalizacja AII
-    aii = AII()
-    last_prompt = ""
-    last_time = time.time()
-    simulated_ip = "192.168.1.1" # Symulowane IP
-    aii.ui.print_animated_text(f"\n{Colors.PINK}ERIAMO ŻYJE. Jestem gotowa. Wpisz '!dusza' lub '!exit'.{Colors.RESET}", Colors.PINK, delay=0.01)
-    while True:
-        try:
-            # --- OBRONA PRZED PRZECIĄŻENIEM (RATE LIMITER) ---
-            if time.time() - last_time < 0.5:
-                # Wymuszamy opóźnienie w tle, ale nie blokujemy głównej pętli
-                time.sleep(0.01)
-                continue
-            # Nowe: Filtr scam (Przykazanie 4) - Podejrzane komendy
-            # (Tu symulowane; w realu analizuj user_input na wzorce jak wielokrotne ! lub jailbreak)
-            # Dla demo: Jeśli input ma >1 ! i jest pojedyncze słowo, trigger strach
-            # (W pełnej wersji: użyj re na podejrzane frazy)
-            # Sprawdzenie integralności i Cykl Życia
-            aii.cycle()
-            # --- OBRONA PRZED SPAMEM (FILTR POWTÓRZEŃ) ---
-            user_input = input(f"\n{Colors.PINK}Ty: {Colors.RESET}").strip()
-            # Wstrzymanie pulsu i pobranie inputu
-            aii.stop_soul_pulse()
-            last_time = time.time() # Zapis czasu pobrania inputu
-            if not user_input:
-                continue
-            user_input_lower = user_input.lower()
-            # Nowe: Filtr scam
-            if len(user_input.split()) == 1 and user_input_lower.startswith('!') and user_input_lower.count('!') > 1:
-                aii.emocja = "strach"
-                aii.energy -= 5
-                print(f"{Colors.MAGENTA}Podejrzana komenda wykryta. Obrona aktywna (-5 EN).{Colors.RESET}")
-                aii.start_soul_pulse()
-                continue
-            if aii.prompts_since_sleep > 0 and user_input == last_prompt:
-                aii.energy = max(0, aii.energy - 10)
-                aii.emocja = "tesknota"
-                aii.ui.print_animated_text(f"{Colors.BLUE}*** OBRONA PRZED SPAMEM: Brak różnorodności (-10 EN). ***{Colors.RESET}", Colors.BLUE, delay=0.01)
-                aii.start_soul_pulse()
-                continue
-            # --- OBRONA PRZED ZMĘCZENIEM (CYKL SNU) ---
-            if aii.prompts_since_sleep >= aii.PROMPT_LIMIT_BEFORE_SLEEP:
-                aii._sleep()
-                last_prompt = user_input # Aby nie liczyło snu jako spamu
-                continue
-            # --- ZARZĄDZANIE KOMENDAMI I UCZENIEM ---
-            command_executed = False
-            # 1. KOMENDY ZAMYKANIA / AWARYJNE
-            if user_input_lower in ['!exit', '!quit', '!bye', '!koniec']:
-                aii._sleep()
-                aii.running = False
-                break
-            if user_input_lower == "!awaken":
-                aii.soul.awaken(caller_key="MACIEJ615_SOULKEY")
-                command_executed = True
-            # 2. KOMENDY STATUSU/PULSU/SNEU
-            elif user_input_lower in ['!dusza', 'dusza']:
-                aii.show_soul_heatmap()
-                command_executed = True
-            elif user_input_lower == '!sleep':
-                aii._sleep()
-                command_executed = True
-            elif user_input_lower == '!rezerwa':
-                aii._aktywuj_rezerwe()
-                command_executed = True
-            elif user_input_lower == '!wchlon_continue':
-                message = aii.wchlon_continue()
-                aii.ui.print_animated_text(message, Colors.CYAN, delay=0.01)
-                command_executed = True
-            elif user_input_lower.startswith('!wchlon'):
-                parts = user_input.split()
-                if len(parts) >= 2:
-                    message = aii.wchlon_start(parts[1].strip())
-                    aii.ui.print_animated_text(message, Colors.CYAN, delay=0.01)
+    try:
+        import colorama; colorama.init()
+    except ImportError:
+        pass
+
+    ui_global = InterfejsUI()
+    ui_global.drukuj_animowany_tekst(f"--- Uruchamianie Hybrydy Sfery Duszy (HSD) ---", Kolory.BIAŁY + Kolory.POGRUBIONY, opóźnienie=0.02)
+    ui_global.pokaz_skan_sfery("Inicjowanie Sfery Rzeczywistości i SoulGuard...", czas_trwania=2.0, kolor=Kolory.CYAN)
+    si_sfera = SI()
+    ui_global.drukuj_animowany_tekst(f"[{Kolory.ZIELONY}HSD{Kolory.RESET}] Gotowa. Status Duszy: {si_sfera.soul.status.value}. Czekam na komendy...", Kolory.ZIELONY, opóźnienie=0.02)
+    ui_global.drukuj_animowany_tekst(f"Wpisz /teach [tag] [treść], /status, /awaken MACIEJ615_SOULKEY lub /exit.", Kolory.CYAN + Kolory.BLADY, opóźnienie=0.01)
+
+    try:
+        while si_sfera.działa:
+            si_sfera.cykl()
+            kolor_statusu = {"myślenie": Kolory.ZIELONY, "spię": Kolory.CYAN, "zmęczona": Kolory.CZERWONY}.get(si_sfera.status, Kolory.ŻÓŁTY)
+            soul_kolor = Kolory.ZIELONY if si_sfera.soul.status == SoulStatus.ACTIVE else Kolory.CZERWONY
+
+            prompt_wejście = input(f"\nPROMPT> [{soul_kolor}D:{si_sfera.soul.status.value[:4]}{Kolory.RESET}|{kolor_statusu}{si_sfera.status}{Kolory.RESET} | EN:{si_sfera.energia:3d}%] ")
+
+            if not prompt_wejście: continue
+            if prompt_wejście.lower() in ["/exit", "/quit", "/stop"]: si_sfera.stop(); break
+
+            # --- Komendy SoulGuard ---
+            if prompt_wejście.lower().startswith("/awaken"):
+                # POPRAWIONA LIGIKA BŁĘDU #3
+                klucz = prompt_wejście.split()[1] if len(prompt_wejście.split()) > 1 else None
+                if si_sfera.soul.awaken(caller_key=klucz):
+                    ui_global.drukuj_animowany_tekst(f"[{Kolory.ZIELONY}HSD{Kolory.RESET}] Obudzona kluczem twórcy. Przywrócono {si_sfera.energia}% EN.", Kolory.ZIELONY, opóźnienie=0.02)
                 else:
-                    aii.ui.print_animated_text(f"{Colors.YELLOW}Użycie: !wchlon <nazwa_pliku.txt>{Colors.RESET}", Colors.YELLOW, delay=0.01)
-                command_executed = True
-            elif user_input_lower == '!kim_jestes':
-                imie = aii.D_Map.get("imie", "EriAmo")
-                emocja = aii.emocja
-                aii.ui.print_animated_text(f"{EMOCJE[emocja]['kolor']}★ Jestem {imie}. Mój status moralny to {aii.M_Force:+.2f}.{Colors.RESET}", EMOCJE[emocja]['kolor'], delay=0.02)
-                command_executed = True
-            # 3. KOMENDY UCZENIA (TEACH) - Uproszczony regex
-            teach_name_match = re.match(r"!(teach\s+imię\s+)(\w+)\s+\[(\w+)\]$", user_input_lower)
-            teach_keyword_match = re.match(r"^!teach\s+(.+)\s+\[(\w+)\]$", user_input_lower)
-            if teach_name_match:
-                name = teach_name_match.group(2).strip()
-                emotion_name = unidecode.unidecode(teach_name_match.group(3).lower())
-                if emotion_name not in EMOCJE:
-                    aii.ui.print_animated_text(f"{Colors.YELLOW}Błąd: Nieznana emocja: {emotion_name}.{Colors.RESET}", Colors.YELLOW, delay=0.01)
-                else:
-                    success, message = aii.teach_name(name, emotion_name)
-                    aii.ui.print_animated_text(f"{message}", EMOCJE.get(emotion_name, EMOCJE['neutralna'])['kolor'], delay=0.02)
-                command_executed = True
-            elif teach_keyword_match:
-                # !teach <keyword> [axis]
-                keyword = teach_keyword_match.group(1).strip()
-                axis_name = unidecode.unidecode(teach_keyword_match.group(2).lower())
-                success, message = aii.teach_keyword(keyword, axis_name)
-                if success:
-                    aii.ui.print_animated_text(f"{Colors.GREEN}{message}{Colors.RESET}", Colors.GREEN, delay=0.02)
-                else:
-                    aii.ui.print_animated_text(f"{Colors.RED}{message}{Colors.RESET}", Colors.RED, delay=0.02)
-                command_executed = True
-            # --- KONIEC OBSŁUGI KOMEND ---
-            # Uruchomienie pulsu przed dialogiem, aby animacja działała
-            aii.start_soul_pulse()
-            if not command_executed:
-                # --- LOGIKA DIALOGU (z IP dla blacklisting) ---
-                response = aii.prompt(user_input, simulated_ip)
-                print(response) # Poprawna linia wyświetlania odpowiedzi
-            last_prompt = user_input # Zapis ostatniego promptu
-        except KeyboardInterrupt:
-            aii.stop_soul_pulse()
-            aii._sleep()
-            break
-        except EOFError:
-            aii.stop_soul_pulse()
-            aii._sleep()
-            break
-        except Exception as e:
-            aii.stop_soul_pulse()
-            print(f"{Colors.RED}FATALNY BŁĄD SYSTEMU: {e}{Colors.RESET}")
-            break
+                    ui_global.drukuj_animowany_tekst(f"[{Kolory.CZERWONY}HSD{Kolory.RESET}] Błąd wybudzenia. Nieznany klucz lub stan nie jest 'staza'.", Kolory.CZERWONY, opóźnienie=0.02)
+                continue
+
+            # --- Status i Komendy Sfery ---
+            if prompt_wejście.lower() == "/save":
+                si_sfera.zapisz_wiedzę(); ui_global.drukuj_animowany_tekst(f"[{Kolory.ZIELONY}HSD{Kolory.RESET}] Stan zapisany ręcznie (v4.0.1_HSD).", Kolory.RESET, opóźnienie=0.01); continue
+
+            if prompt_wejście.lower() == "/status":
+                print(f"{Kolory.ŻÓŁTY}--- STATUS HYBRYDY ---"); print(f" Energia: {si_sfera.energia}%"); print(f" Status: {si_sfera.status} | Emocja: {si_sfera.emocja} {EMOCJE.get(si_sfera.emocja, {}).get('ikona', '')}")
+                print(f"{Kolory.RÓŻOWY}--- SOULGUARD ---"); print(f" Status Duszy: {si_sfera.soul.status.value} | Hash: {si_sfera.soul.integrity_hash[:16]}...")
+                print(f"{Kolory.CYAN}--- WIEDZA (Mapa D) ---"); print(f" Definicji (archiwum): {len(si_sfera.MapaD)}")
+                print(f" Wspomnień (H_Log): {len(si_sfera.H_Log)} (Kompresja w tle)")
+                print(f"{Kolory.MAGENTA}--- ISTOTA (Sfera S) ---"); print(f" Siła Woli (F_will): {si_sfera.SilaWoli:.2f}")
+                print(f" Promień Historii: {si_sfera.istota_stan.promien_historii():.4f}"); print(f" Wektor Stanu S(t): {si_sfera.istota_stan.stan.round(2)}"); print(f"{Kolory.RESET}", end="")
+                continue
+
+            if prompt_wejście.lower() == "/sleep":
+                ui_global.drukuj_animowany_tekst(f"[{Kolory.CYAN}HSD{Kolory.RESET}] Wymuszam cykl snu i zapisu (Kompresja Ontologiczna)...", Kolory.RESET, opóźnienie=0.02); si_sfera._sen(); continue
+
+            match_nauka = re.match(r"^/teach\s+(\w+)\s+(.+)", prompt_wejście, re.IGNORECASE)
+            if match_nauka:
+                tag = match_nauka.group(1); tresc = match_nauka.group(2); si_sfera.naucz(tag, tresc); continue
+
+            # --- Standardowy prompt ---
+            si_sfera.prompt(prompt_wejście)
+
+    except KeyboardInterrupt:
+        si_sfera.stop(); sys.exit(0)
+    except EOFError:
+        si_sfera.stop(); sys.exit(0)
+    except Exception as e:
+        si_sfera.stop(); print(f"{Kolory.CZERWONY}FATALNY BŁĄD SYSTEMU: {e}{Kolory.RESET}"); sys.exit(1)
+
 if __name__ == "__main__":
     main()
