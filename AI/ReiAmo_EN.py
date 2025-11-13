@@ -1,27 +1,12 @@
 #!/usr/bin/env python3
+
 # -*- coding: utf-8 -*-
-#
-# Model Kuli Rzeczywistości (EriAmo)
+# Model Kuli Rzeczywistości (Sfera Rzeczywistości)
 # Copyright (C) 2025 Maciej A. Mazur
-#
-# Ten program jest darmowym oprogramowaniem:
-# możesz go redystrybuować i/lub modyfikować
-# zgodnie z warunkami GNU General Public License,
-# opublikowanymi przez Free Software Foundation,
-# w wersji 3 tej Licencji lub (według Twojego wyboru)
-# dowolnej nowszej wersji.
-#
-# Program jest rozpowszechniany w nadziei, że będzie użyteczny,
-# ale BEZ ŻADNEJ GWARANCJI. Zobacz GNU General Public License,
-# aby uzyskać więcej szczegółów.
-#
-# Pełną licencję powinieneś otrzymać wraz z tym programem.
-# Jeśli nie, zobacz <http://www.gnu.org/licenses/>.
-# --- Sphere of Reality Model (S) ---
-# --- ENGLISH Version ---
-# Author: Maciej A. Mazur
-# License: CC BY-SA 4.0
-#
+# Licencja: GNU General Public License v3.0 (GPLv3)
+#!/usr/bin/env python3
+
+# -*- coding: utf-8 -*-
 
 import sys
 import time
@@ -29,616 +14,498 @@ import numpy as np
 import json
 import os
 import threading
-import hashlib 
+import hashlib
 import random
-import re 
-try:
-    import unidecode
-except ImportError:
-    print("Warning: 'unidecode' library not found. Normalization will be basic.")
-    print("Please run: pip install unidecode")
-    # Zapewnia awaryjną funkcję, jeśli unidecode nie jest zainstalowane
-    class UnidecodeMock:
-        def unidecode(self, text):
-            return text
-    unidecode = UnidecodeMock()
+import re
+from numpy.linalg import norm
 
+# --- STAŁE FILTRA ONTOLOGICZNEGO ---
+ONTOLOGICAL_THRESHOLD = 0.98 # Filtr Ontologiczny: >0.98 dla redundancji
+VECTOR_DIM = 8
 
-# --- COLORS ---
+# --- KOLORY ---
+
 class Colors:
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    RED = "\033[31m"
-    CYAN = "\033[36m"
-    MAGENTA = "\033[35m"
-    PINK = "\033[95m"
-    BLUE = "\033[34m"
-    WHITE = "\033[37m"
-    BOLD = "\033[1m"
+    GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"
+    CYAN = "\033[36m"; MAGENTA = "\033[35m"; PINK = "\033[95m"
+    BLUE = "\033[34m"; WHITE = "\033[37m"; BOLD = "\033[1m"
     RESET = "\033[0m"
-    BLINK = "\033[5m"
-    FAINT = "\033[2m"
 
-# --- EMOTIONS (English) ---
+# --- EMOCJE (polskie napisy) ---
+
 EMOCJE = {
-    "joy":       {"kolor": Colors.GREEN,   "ikona": "😊", "energia": +10},
-    "anger":     {"kolor": Colors.RED,     "ikona": "😡", "energia": -15},
-    "sadness":   {"kolor": Colors.BLUE,    "ikona": "😢", "energia": -20},
-    "fear":      {"kolor": Colors.MAGENTA, "ikona": "😨", "energia": -10},
-    "love":      {"kolor": Colors.PINK,    "ikona": "❤️", "energia": +15},
-    "surprise":  {"kolor": Colors.YELLOW,  "ikona": "😮", "energia": +5},
-    "neutral":   {"kolor": Colors.WHITE,   "ikona": "⚪", "energia": 0}
+    "radość": {"kolor": Colors.GREEN, "ikona": "[RADOŚĆ]", "energia": +10, "modulator": 0.1},
+    "złość": {"kolor": Colors.RED, "ikona": "[ZŁOŚĆ]", "energia": -15, "modulator": -0.2},
+    "smutek": {"kolor": Colors.BLUE, "ikona": "[SMUTEK]", "energia": -20, "modulator": -0.15},
+    "strach": {"kolor": Colors.MAGENTA, "ikona": "[STRACH]", "energia": -10, "modulator": -0.1},
+    "miłość": {"kolor": Colors.PINK, "ikona": "[MIŁOŚĆ]", "energia": +15, "modulator": 0.2},
+    "zdziwienie": {"kolor": Colors.YELLOW, "ikona": "[ZASKOCZENIE]","energia": +5, "modulator": 0.05},
+    "neutralna": {"kolor": Colors.WHITE, "ikona": "[MYŚL]", "energia": 0, "modulator": 0.0}
 }
 
-# --- FancyUI Class (Language Agnostic) ---
-class FancyUI:
-    def __init__(self):
-        self.spinner_frames = ['-', '\\', '|', '/']
-        self.dots_frames = ['   ', '.  ', '.. ', '...']
-        self.thinking_frames = ["[_]", "[_ _]", "[_ _ _]"]
-        self.planet_dots_frames = ["○ . . .", ". ○ . .", ". . ○ .", ". . . ○"]
+# ------------------------------------------------------------------ #
+# FUNKCJE WEKTOROWE I FILTRACJA
+# ------------------------------------------------------------------ #
 
-    def print_animated_text(self, text, color=Colors.WHITE, delay=0.03):
-        sys.stdout.write(color)
-        for char in text:
-            sys.stdout.write(char)
-            sys.stdout.flush()
-            time.sleep(delay)
-        sys.stdout.write(Colors.RESET + "\n")
+def fast_cosine_similarity(vec_a, vec_b):
+    """Oblicza podobieństwo cosinusowe."""
+    dot_product = np.dot(vec_a, vec_b)
+    norm_a = norm(vec_a) 
+    norm_b = norm(vec_b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot_product / (norm_a * norm_b)
 
-    def show_spinner(self, message, duration_sec=1.0, final_message="", color=Colors.CYAN):
-        end_time = time.time() + duration_sec
-        idx = 0
-        while time.time() < end_time:
-            sys.stdout.write(f"\r{color}{self.spinner_frames[idx % len(self.spinner_frames)]} {message}{Colors.RESET}")
-            sys.stdout.flush()
-            time.sleep(0.1)
-            idx += 1
-        sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")
-        if final_message:
-            print(f"{color}{final_message}{Colors.RESET}")
-        else:
-            sys.stdout.write(Colors.RESET)
-
-    def show_thinking_dots(self, message, duration_sec=1.0, color=Colors.FAINT + Colors.CYAN):
-        end_time = time.time() + duration_sec
-        idx = 0
-        while time.time() < end_time:
-            sys.stdout.write(f"\r{color}{message} {self.dots_frames[idx % len(self.dots_frames)]}{Colors.RESET}")
-            sys.stdout.flush()
-            time.sleep(0.3)
-            idx += 1
-        sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")
-        sys.stdout.write(Colors.RESET)
-
-    def show_planet_scan(self, message, duration_sec=1.5, color=Colors.MAGENTA):
-        end_time = time.time() + duration_sec
-        idx = 0
-        while time.time() < end_time:
-            sys.stdout.write(f"\r{color}{message} {self.planet_dots_frames[idx % len(self.planet_dots_frames)]}{Colors.RESET}")
-            sys.stdout.flush()
-            time.sleep(0.2)
-            idx += 1
-        sys.stdout.write("\r" + " " * (len(message) + 10) + "\r")
-        sys.stdout.write(Colors.RESET)
-
-# ---------------------------------------------------------------------- #
-# BytS (Sphere) Class (Language Agnostic)
-# ---------------------------------------------------------------------- #
-class BytS:
-    def __init__(self, wymiary):
-        self.stan = np.zeros(wymiary)
-
-    def promien_historii(self):
-        return np.linalg.norm(self.stan)
-
-    def oblicz_korelacje_struny(self, nowa_struna_vec):
-        wektor_historii = self.stan
-        wektor_bodzca = np.asarray(nowa_struna_vec)
-        
-        promien_historii = self.promien_historii()
-        sila_bodzca = np.linalg.norm(wektor_bodzca)
-        
-        if promien_historii == 0 or sila_bodzca == 0:
-            return 0.0 
-            
-        iloczyn_skalarny = np.dot(wektor_historii, wektor_bodzca)
-        korelacja = iloczyn_skalarny / (promien_historii * sila_bodzca)
-        
-        return np.clip(korelacja, -1.0, 1.0)
-
-    def akumuluj_styk(self, nowa_struna_vec):
-        self.stan = self.stan + np.asarray(nowa_struna_vec)
-
-# ---------------------------------------------------------------------- #
-# --- AII Integrated with BytS (ENGLISH Version) ---
-# ---------------------------------------------------------------------- #
-class AII:
-
-    # --- ENGLISH AXES (Landscape P) ---
-    AXES_KEYWORDS = {
-        # Axis 0: Logic / Reason
-        "logic": ["logic", "logical", "sense", "reason", "why", "because", "result", "fact"],
-        # Axis 1: Emotion / Feeling
-        "emotion": ["feel", "emotion", "love", "anger", "sadness", "joy", "fear", "feeling"],
-        # Axis 2: Being / Ontology (Sphere Model)
-        "being": ["being", "existence", "i", "am", "is", "sphere", "reality", "history", "ontology", "name", "reiamo"],
-        # Axis 3: Action / Conflict (Will, W40k)
-        "action": ["fight", "action", "conflict", "war", "force", "enemy", "chaos", "will", "do", "make"],
-        # Axis 4: Creation / Art
-        "creation": ["create", "art", "build", "music", "write", "new", "beauty", "design"],
-        # Axis 5: Knowledge / Information
-        "knowledge": ["knowledge", "science", "teach", "data", "information", "what", "who", "how"],
-        # Axis 6: Time / History
-        "time": ["time", "when", "past", "now", "future", "history", "step", "path", "today", "tomorrow"],
-        # Axis 7: Space / Landscape
-        "space": ["where", "place", "landscape", "road", "world", "direction", "location", "here", "there"]
-    }
-    # Normalize keywords for robust matching
-    AXES_KEYWORDS_ASCII = {k: set(unidecode.unidecode(w) for w in v) for k, v in AXES_KEYWORDS.items()}
-    AXES_ORDER = ["logic", "emotion", "being", "action", "creation", "knowledge", "time", "space"]
+def _modulate_vector_by_emotion(vec: np.ndarray, emocja: str) -> np.ndarray:
+    """Moduluje wektor kontekstu w zależności od osi emocjonalnej.
+    Wspomnienia zyskują kierunek w przestrzeni wektorowej emocji.
+    """
+    if emocja not in EMOCJE:
+        return vec.copy()
     
-    # Ontological Compression Threshold
-    ONTOLOGICAL_COMPRESSION_THRESHOLD = 0.98
+    mod = EMOCJE[emocja]['modulator']
+    
+    # Prosta modulacja: Radość/Miłość zwiększają skalę i kierunek, Złość/Smutek zmniejszają
+    # Używamy np. prostej osi: pierwsze 4 wymiary dla pozytywnego, drugie 4 dla negatywnego
+    mod_vec = vec.copy()
+    
+    # Pozytywna emocja: wzmacniamy pierwsze 4 wymiary
+    if mod > 0:
+        mod_vec[:4] = np.clip(mod_vec[:4] + mod, 0.0, 1.0)
+    # Negatywna emocja: wzmacniamy drugie 4 wymiary
+    elif mod < 0:
+        mod_vec[4:] = np.clip(mod_vec[4:] + abs(mod), 0.0, 1.0)
+        
+    # Ponowna normalizacja po modulacji
+    norm_mod = norm(mod_vec)
+    if norm_mod == 0:
+        return mod_vec
+    return mod_vec / norm_mod
 
+# --- AII Z EMOCJAMI ---
+
+class AII:
     def __init__(self):
-        self.D_Map = {}     
-        self.H_log = []     
+        self.D_Map = {}
+        self.H_log = []
         self.energy = 100
         self.load = 0
-        self.status = "thinking" # Translated
-        self.emocja = "neutral"  # Translated
-        self.sleep_interval = 300
+        self.status = "myślę"
+        self.emocja = "neutralna"
+        self.sleep_interval = 300 # sekund między cyklami snu
         self.running = True
         self.prompts_since_sleep = 0
         self.max_sleep_time = 2.0
         self.max_hlog = 1000
-        self.F_will = 0.5   
+        self.F_will = 0.5
         self.ostatnie_slowa = []
-        self.ui = FancyUI()
-        
-        self.wymiary = len(self.AXES_ORDER) 
-        self.byt_stan = BytS(wymiary=self.wymiary) 
-        
-        self.load_knowledge() # Loads from the _EN.json file
+        self.load_knowledge()
         self.start_sleep_cycle()
 
     # ------------------------------------------------------------------ #
-    # Text Normalization Utility
-    # ------------------------------------------------------------------ #
-    def _normalize_text(self, text):
-        """Converts text to lowercase, ASCII, and removes special chars."""
-        try:
-            text_lower = text.lower()
-            text_ascii = unidecode.unidecode(text_lower) 
-            text_clean = re.sub(r'[^\w\s_]', '', text_ascii)
-            return text_clean
-        except Exception as e:
-            print(f"{Colors.RED}Text normalization error: {e}{Colors.RESET}")
-            return text.lower() 
-
-    # ------------------------------------------------------------------ #
-    # Vectorization (Language Agnostic, uses AXES_KEYWORDS_ASCII)
+    # WEKTORY – Z NORMALIZACJĄ!
     # ------------------------------------------------------------------ #
     def _vector_from_text(self, text):
-        """Creates a semantic vector by projecting text onto the P-Landscape axes."""
-        text_clean = self._normalize_text(text)
-        words = set(text_clean.split())
+        text = text.lower()
+        # Usuń znaki niealfanumeryczne (oprócz spacji)
+        text = ''.join(c for c in text if c.isalnum() or c in " ")
+        text = text.strip()
+        if not text:
+            text = "pusto"
         
-        if not words:
-            return np.zeros(self.wymiary) 
-
-        vec = np.zeros(self.wymiary)
+        # Używamy MD5 i bierzemy 8 elementów
+        h = hashlib.md5(text.encode()).hexdigest()
+        vals = [int(h[i:i+2], 16) / 255.0 for i in range(0, VECTOR_DIM * 2, 2)]
+        vec = np.array(vals, dtype=float)
         
-        for i, axis_name in enumerate(self.AXES_ORDER):
-            keywords = self.AXES_KEYWORDS_ASCII[axis_name]
-            score = len(words.intersection(keywords))
-            vec[i] = score
-
-        norm = np.linalg.norm(vec)
-        if norm == 0:
+        norm_val = np.linalg.norm(vec)
+        if norm_val == 0:
             return vec
-        
-        return vec / norm
-    
+        return vec / norm_val # normalizacja do wektora jednostkowego
+
     # ------------------------------------------------------------------ #
-    # ### SEPARATE ENGLISH SAVE FILE ###
+    # ZAPIS / ODCZYT
     # ------------------------------------------------------------------ #
     def save_knowledge(self):
-        """Saves the entire AI state to a single, consolidated EN file."""
         os.makedirs("data", exist_ok=True)
-        
-        serial_dmap = {k: {
+        serial = {k: {
             'wektor_C_Def': v['wektor_C_Def'].tolist(),
             'waga_Ww': float(v['waga_Ww']),
-            'tagi': v['tagi'],
-            'tresc': v.get('tresc', '') 
+            'tagi': v['tagi']
         } for k, v in self.D_Map.items()}
+        with open("data/D_Map.json", "w", encoding="utf-8") as f:
+            json.dump(serial, f, indent=2, ensure_ascii=False)
+            
+        # Zapis H_log z wektorami jako listy
+        h_log_serial = [{'h_vector': exp['h_vector'].tolist() if isinstance(exp['h_vector'], np.ndarray) else exp['h_vector'], 
+                         'tresc': exp['tresc'], 
+                         'emocja': exp.get('emocja', 'neutralna')} 
+                        for exp in self.H_log[-self.max_hlog:]]
         
-        serial_hlog = self.H_log[-self.max_hlog:]
-        
-        serial_byt = {
-            'stan': self.byt_stan.stan.tolist(),
-            'F_will': self.F_will
-        }
+        with open("data/H_log.json", "w", encoding="utf-8") as f:
+            json.dump(h_log_serial, f, indent=2, ensure_ascii=False)
 
-        master_state = {
-            'D_Map_Data': serial_dmap,
-            'H_Log_Data': serial_hlog,
-            'Byt_Stan_Data': serial_byt
-        }
-
-        try:
-            # Save to the _EN.json file
-            with open("data/AII_State_EN.json", "w", encoding="utf-8") as f:
-                json.dump(master_state, f, ensure_ascii=False)
-        except Exception as e:
-            print(f"{Colors.RED}[SAVE ERROR] Failed to save state: {e}{Colors.RESET}") # Translated
-
-    # ------------------------------------------------------------------ #
-    # ### SEPARATE ENGLISH LOAD FILE ###
-    # ------------------------------------------------------------------ #
     def load_knowledge(self):
-        """Loads the entire AI state from the single _EN.json file."""
         os.makedirs("data", exist_ok=True)
-        
         try:
-            # Load from the _EN.json file
-            with open("data/AII_State_EN.json", encoding="utf-8") as f:
-                master_state = json.load(f)
+            with open("data/D_Map.json", encoding="utf-8") as f:
+                data = json.load(f)
+                self.D_Map = {k: {
+                    'wektor_C_Def': np.array(v['wektor_C_Def'], dtype=float),
+                    'waga_Ww': float(v['waga_Ww']),
+                    'tagi': v['tagi']
+                } for k, v in data.items()}
         except Exception:
             self.D_Map = {}
+            
+        try:
+            with open("data/H_log.json", encoding="utf-8") as f:
+                loaded_h_log = json.load(f)
+                # Konwersja wektorów z powrotem na numpy.ndarray
+                self.H_log = [{'h_vector': np.array(exp['h_vector'], dtype=float), 
+                               'tresc': exp['tresc'], 
+                               'emocja': exp.get('emocja', 'neutralna')} 
+                              for exp in loaded_h_log]
+        except Exception:
             self.H_log = []
-            self.byt_stan = BytS(wymiary=self.wymiary)
-            self.F_will = 0.5
-            return 
-        
-        # Unpack D_Map
-        try:
-            data = master_state.get('D_Map_Data', {})
-            self.D_Map = {k: {
-                'wektor_C_Def': np.array(v['wektor_C_Def'], dtype=float),
-                'waga_Ww': float(v['waga_Ww']),
-                'tagi': v['tagi'],
-                'tresc': v.get('tresc', 'NO CONTENT') # Translated
-            } for k, v in data.items()}
-        except Exception:
-            self.D_Map = {}
-            
-        # Unpack H_log
-        self.H_log = master_state.get('H_Log_Data', [])
-            
-        # Unpack Byt_Stan
-        try:
-            data = master_state.get('Byt_Stan_Data', {})
-            stan_vector = np.array(data.get('stan', []), dtype=float)
-            
-            if stan_vector.shape == (self.wymiary,):
-                self.byt_stan.stan = stan_vector
-            else:
-                if data: 
-                    # Translated
-                    print(f"{Colors.RED}[ERROR] Byt dimension in file ({stan_vector.shape}) mismatch with model ({self.wymiary,}). Resetting Byt.{Colors.RESET}")
-                self.byt_stan = BytS(wymiary=self.wymiary)
-                
-            self.F_will = float(data.get('F_will', 0.5))
-        except Exception:
-            self.byt_stan = BytS(wymiary=self.wymiary)
-            self.F_will = 0.5
-            
+
     # ------------------------------------------------------------------ #
-    # SLEEP CYCLE
+    # CYKL SNU – Wektoryzacja i Kompresja Ontologiczna
     # ------------------------------------------------------------------ #
     def start_sleep_cycle(self):
         def cycle():
             while self.running:
                 time.sleep(self.sleep_interval)
-                if not self.running:
-                    break
+                if not self.running: break
                 self._sleep()
         threading.Thread(target=cycle, daemon=True).start()
 
     def _sleep(self):
-        self.status = "sleeping" # Translated
-        self.ui.print_animated_text(f"\n[AII] Sleep: consolidating knowledge...", Colors.CYAN + Colors.FAINT, delay=0.05) # Translated
+        self.status = "śpię"
+        print(f"\n{Colors.CYAN}[AII] Sen: marzę o {random.choice(list(EMOCJE.keys()))}...{Colors.RESET}")
         start = time.time()
-        processed = 0
-        for exp in self.H_log[-10:]: 
-            if time.time() - start > self.max_sleep_time:
-                break
-            tag = exp.get('tresc', '')
-            for d in self.D_Map.values():
-                if tag in d.get('tagi', []):
-                    d['waga_Ww'] = min(float(d.get('waga_Ww', 0)) + 1.0, 100.0)
-                    processed += 1
-                    
-        self.energy = min(100, self.energy + 15)
         
-        self.save_knowledge() # Saves the _EN.json file
-        self.status = "thinking" # Translated
+        # Wzmocnienie D_Map (stara logika wzmacniania)
+        processed_reinforce = 0
+        for exp in self.H_log[-10:]: # Bierzemy tylko ostatnie 10
+            if time.time() - start > self.max_sleep_time * 0.5: break # Max 50% czasu na wzmocnienie
+            
+            tresc = exp.get('tresc', '').lower()
+            słowa_kluczowe = set(tresc.split())
+            
+            for d in self.D_Map.values():
+                wzmocnione = False
+                for tag in d.get('tagi', []):
+                    if tag in słowa_kluczowe: 
+                        d['waga_Ww'] = min(d['waga_Ww'] + 1.0, 100.0)
+                        processed_reinforce += 1
+                        wzmocnione = True
+                        break
+                if wzmocnione: continue
+
+        # Kompresja Ontologiczna (nowa, kluczowa mechanika)
+        history_to_keep = []
+        compressed_count = 0
+        
+        for exp in self.H_log:
+            if time.time() - start > self.max_sleep_time: break # Ograniczenie czasowe na całą operację
+            
+            is_redundant = False
+            h_vec = exp['h_vector'] # Wektor z historii
+            
+            if len(self.D_Map) > 0:
+                for d in self.D_Map.values():
+                    d_vec = d['wektor_C_Def']
+                    
+                    # Obliczanie podobieństwa wektorowego (Filtr Ontologiczny)
+                    correlation = fast_cosine_similarity(h_vec, d_vec)
+
+                    if correlation > ONTOLOGICAL_THRESHOLD: 
+                        # WIEDZA REDUNDANTNA! Została już wchłonięta do D_Map lub jest zbyt podobna.
+                        is_redundant = True
+                        compressed_count += 1
+                        break
+
+            if not is_redundant:
+                history_to_keep.append(exp)
+        
+        self.H_log = history_to_keep
+        
+        self.energy = min(100, self.energy + 15) # Odzyskiwanie energii
+        self.save_knowledge()
+        self.status = "myślę"
         self.prompts_since_sleep = 0
-        self.ui.print_animated_text(f"[AII] Awake! (Consolidated {processed} weights, +15% energy)", Colors.GREEN, delay=0.02) # Translated
-        print("")
+        print(f"{Colors.GREEN}[AII] Obudzony! Wzmocnień: {processed_reinforce}, Kompresja: {compressed_count}. H_log: {len(self.H_log)} (+15% energii){Colors.RESET}\n")
 
     # ------------------------------------------------------------------ #
-    # CYCLE
+    # CYKL PRACY
     # ------------------------------------------------------------------ #
     def cycle(self):
         self.load = int(np.random.randint(30, 70))
-        if self.status != "sleeping":
+        if self.status != "śpię":
             drop = int(np.random.randint(0, 4)) if self.energy > 50 else int(np.random.randint(1, 6))
             self.energy = max(0, self.energy - drop)
         if self.energy == 0 or self.prompts_since_sleep > 5:
-            self.status = "tired" # Translated
+            self.status = "zmęczony"
         return "C", self.load, self.energy
 
     # ------------------------------------------------------------------ #
-    # TEACHING (with Ontological Compression)
+    # NAUCZANIE – Emocjonalne Wektoryzowanie Kontekstu
     # ------------------------------------------------------------------ #
     def teach(self, tag, tresc):
+        vec_base = self._vector_from_text(tresc)
         
-        # 1. Create vector for new data ($\vec{F}$)
-        vec_F = self._vector_from_text(tresc)
+        # Emocja nauczania to 'miłość'
+        emocja_nauczania = "miłość"
+        vec_emocjonalny = _modulate_vector_by_emotion(vec_base, emocja_nauczania)
         
-        if np.linalg.norm(vec_F) == 0:
-            self.ui.print_animated_text(f"[COMPRESSOR] Ignored (empty vector).", Colors.YELLOW, delay=0.01) # Translated
-            return
+        def_id = f"Def_{len(self.D_Map)+1:03d}"
+        
+        # Wytnij znaki interpunkcyjne z tagów
+        words = [re.sub(r'[^\w]', '', w) for w in tresc.lower().split()]
+        all_tags = [tag.lower()] + [w for w in words if w]
+        
+        # Unikamy duplikatów
+        seen = set()
+        all_tags = [t for t in all_tags if t not in seen and not seen.add(t)]
+        
+        self.D_Map[def_id] = {'wektor_C_Def': vec_emocjonalny, 'waga_Ww': 5.0 + EMOCJE[emocja_nauczania]['modulator'] * 20, 'tagi': all_tags}
+        
+        # Zapisujemy Wektor Emocjonalny do historii
+        self.H_log.append({'h_vector': vec_emocjonalny, 'tresc': tresc, 'emocja': emocja_nauczania})
+        
+        self.save_knowledge()
+        print(f"{Colors.GREEN}{Colors.BOLD}[NAUCZONO] {def_id} ({EMOCJE[emocja_nauczania]['ikona']}) → \"{tresc}\" (tagi: {', '.join(all_tags[:5])}){Colors.RESET}")
 
-        # 2. Calculate correlation with Byt's history
-        korelacja_historyczna = self.byt_stan.oblicz_korelacje_struny(vec_F)
-        
-        # 3. Byt always experiences the interaction (in RAM)
-        self.byt_stan.akumuluj_styk(vec_F * 1.5) 
 
-        # 4. Compression Decision (Archiving)
-        if korelacja_historyczna > self.ONTOLOGICAL_COMPRESSION_THRESHOLD:
-            # --- COMPRESSION PATH ---
-            # Data is semantically redundant.
-            self.ui.print_animated_text(f"[COMPRESSOR] Redundant data. (Correlation: {korelacja_historyczna:+.2f}). Byt strengthened (in memory).", Colors.FAINT + Colors.CYAN, delay=0.01) # Translated
-        
-        else:
-            # --- ARCHIVING PATH ---
-            # Data is "new". Save it to the "Brain" (D_Map).
-            def_id = f"Def_{len(self.D_Map)+1:03d}"
-            
-            tresc_clean_for_tags = self._normalize_text(tresc)
-            words = [w.strip(".,!?;:()[]\"'") for w in tresc_clean_for_tags.split()]
-            tag_clean = self._normalize_text(tag) 
-            
-            all_tags = [tag_clean] + words
-            seen = []
-            all_tags = [t for t in all_tags if t and (t not in seen and not seen.append(t))]
-            
-            self.D_Map[def_id] = {
-                'wektor_C_Def': vec_F, 
-                'waga_Ww': 5.0, 
-                'tagi': all_tags,
-                'tresc': tresc # Save the ORIGINAL content
-            }
-            
-            self.H_log.append({'h_vector': vec_F.tolist(), 'tresc': tresc, 'def_id': def_id, 'type': 'teach'})
-            
-            self.ui.print_animated_text(f"[ARCHIVED] New definition {def_id}. (Correlation: {korelacja_historyczna:+.2f})", Colors.GREEN + Colors.BOLD, delay=0.01) # Translated
-
-            # 5. Save the consolidated state file
-            self.save_knowledge() # Only saves to disk when new info is learned
+    def forget(self, tag):
+        removed = sum(1 for k, v in list(self.D_Map.items()) if tag in v['tagi'])
+        self.D_Map = {k: v for k, v in self.D_Map.items() if tag not in v['tagi']}
+        self.save_knowledge()
+        print(f"{Colors.YELLOW}[ZAPOMNIANO] Usunięto {removed} definicji z tagiem: {tag}{Colors.RESET}")
 
     # ------------------------------------------------------------------ #
-    # EMOTIONS (Responds to English keys)
+    # DODATKI
     # ------------------------------------------------------------------ #
-    def _trigger_emotion(self, text_input):
-        text_input = text_input.lower()
-        found_emotion = None
-        for emo_name in EMOCJE.keys(): # Keys are now "joy", "anger", etc.
-            if emo_name in text_input:
-                found_emotion = emo_name
-                break 
+    def kawa(self):
+        self.energy = min(100, self.energy + 50)
+        self.emocja = "radość"
+        print(f"{Colors.YELLOW}☕ [KAWA] +50 energii! EN: {self.energy}%. Emocja: {self.emocja}{Colors.RESET}")
+
+    def odpocznij(self):
+        print(f"{Colors.CYAN}AI wymusza sen...{Colors.RESET}")
+        self._sleep()
+
+    def marzenie(self):
+        if len(self.D_Map) < 2:
+            print(f"{Colors.MAGENTA}[MARZENIE] Za mało wspomnień...{Colors.RESET}"); return
         
-        if found_emotion:
-            self.emocja = found_emotion
-            self.energy = max(0, min(100, self.energy + EMOCJE[found_emotion]["energia"]))
-            
-    def _get_emotion_prefix(self):
-        if self.emocja in EMOCJE:
-            emo = EMOCJE[self.emocja]
-            return f"{emo['kolor']}{Colors.BLINK}{emo['ikona']}{Colors.RESET}{emo['kolor']} "
-        return f"{Colors.WHITE}⚪ " 
+        # Generowanie Marzenia na podstawie dwóch losowych wektorów
+        items = list(self.D_Map.items())
+        d1, d2 = random.sample(items, 2)
+        
+        tag1, tag2 = d1[1]['tagi'][0], d2[1]['tagi'][0]
+        
+        # Tworzymy wektor "marzenia" jako prostą sumę/różnicę
+        vec_marzenie = (d1[1]['wektor_C_Def'] + d2[1]['wektor_C_Def']) / 2
+        
+        # Obliczamy jego ogólny kierunek emocjonalny
+        emocja_marzenia = random.choice(list(EMOCJE.keys()))
+        
+        marzenie = f"Połączenie '{tag1}' i '{tag2}' tworzy {emocja_marzenia}."
+        print(f"{Colors.MAGENTA}✨ {EMOCJE[emocja_marzenia]['ikona']} [MARZENIE] {marzenie}{Colors.RESET}")
+
+    def get_tags(self):
+        tags = set()
+        for d in self.D_Map.values():
+            tags.update(d['tagi'])
+        return sorted(tags)
 
     # ------------------------------------------------------------------ #
-    # PROMPT / QUESTION
+    # ODPOWIEDŹ – Konstrukcja Myśli i Wyszukiwanie Kontekstu
     # ------------------------------------------------------------------ #
-    def prompt(self, text_input):
-        self.cycle()
-        
-        if self.status == "sleeping":
-            self.energy = max(0, self.energy - 5) 
-            return f"{Colors.CYAN}[AII] ... (sleeping, -5 energy) ...{Colors.RESET}" # Translated
-        if self.status == "tired":
-            self._trigger_emotion("anger")
-            return f"{self._get_emotion_prefix()}[AII] I am too tired... Must rest.{Colors.RESET}" # Translated
-            
+    def generate_response(self, prompt):
         self.prompts_since_sleep += 1
         
-        # 1. Trigger emotion from prompt
-        self._trigger_emotion(text_input)
+        # 1. BAZOWY WEKTOR PROMPTU
+        vec_base = self._vector_from_text(prompt)
         
-        self.ui.show_thinking_dots("Analyzing...", duration_sec=max(0.5, len(text_input) * 0.05)) # Translated
-        
-        # 2. Create semantic vector from prompt
-        prompt_vec = self._vector_from_text(text_input)
-        
-        text_input_clean = self._normalize_text(text_input)
-        prompt_words = set(w.strip(".,!?;:()[]\"'") for w in text_input_clean.split())
+        # 2. DETEKCJA TAGU / EMOCJI JAWNEJ
+        words = set(re.sub(r'[^\w\s]', '', prompt.lower()).split())
+        detected_tag = None
+        best_match = None
+        max_weight = 0
+        current_emocja = "neutralna"
 
-        # 3. Calculate correlation with Byt's history
-        korelacja_bytu = self.byt_stan.oblicz_korelacje_struny(prompt_vec)
-        
-        # 4. Byt experiences the prompt (in RAM)
-        self.byt_stan.akumuluj_styk(prompt_vec)
+        for did, d in self.D_Map.items():
+            for tag in d['tagi']:
+                if tag in words:
+                    # Wzmocnienie wagi przy użyciu
+                    d['waga_Ww'] = min(d['waga_Ww'] + 0.5, 100)
+                    if d['waga_Ww'] > max_weight:
+                        max_weight = d['waga_Ww']
+                        best_match = (did, tag)
+                        detected_tag = tag
 
-        # 5. Search D_Map (Knowledge) for the best answer
-        best_score = -1
-        best_match_tresc = "I don't understand. Teach me." # Translated
-        best_match_id = None
+        # 3. MODULACJA EMOCJONALNA WEKTORA F
         
-        if not self.D_Map:
-             self._trigger_emotion("sadness") 
-             best_match_tresc = "I haven't been taught anything yet." # Translated
+        # Prosta reguła emocjonalna na podstawie wykrytego tagu
+        if detected_tag in ["złość", "strach", "smutek"]:
+            current_emocja = detected_tag
+        elif detected_tag == "miłość":
+            current_emocja = "miłość"
         else:
-            for def_id, d in self.D_Map.items():
-                sim = np.dot(prompt_vec, d['wektor_C_Def']) 
-                score_vec = sim * d['waga_Ww'] 
-                
-                tag_bonus = 0.0
-                tag_match = prompt_words.intersection(d.get('tagi', [])) 
-                if tag_match:
-                    tag_bonus = len(tag_match) * 100.0 
-                
-                score = score_vec + tag_bonus
-                
-                if score > best_score:
-                    best_score = score
-                    best_match_tresc = d['tresc']
-                    best_match_id = def_id
-
-            SCORE_THRESHOLD = 50.0 
+            # Używamy randomowej emocji, jeśli AI jest naładowana lub zmęczona
+            if self.status == "zmęczony":
+                 current_emocja = "smutek"
+            elif self.energy > 80 and not detected_tag:
+                 current_emocja = random.choice(["radość", "zdziwienie"])
+        
+        vec_emocjonalny = _modulate_vector_by_emotion(vec_base, current_emocja)
+        self.emocja = current_emocja
+        
+        # 4. ZAPIS WSPOMNIENIA (Wektor Emocjonalny ląduje w historii)
+        self.H_log.append({'h_vector': vec_emocjonalny, 'tresc': prompt, 'emocja': current_emocja})
+        
+        # 5. EKSTRAKCJA NOWYCH SŁÓW (PAMIĘĆ BIEŻĄCA)
+        known_words = self.get_tags()
+        new_words = list(words - set(known_words))
+        
+        # 6. KONSTRUKCJA MYŚLI
+        
+        if self.status == "zmęczony" and not detected_tag:
+            odpowiedz = f"({EMOCJE[self.emocja]['ikona']}) Jestem wyczerpany. Potrzebuję odpoczynku. Spróbuj !odpocznij."
+        elif detected_tag:
+            # ODPOWIEDŹ Z JAWNEGO TAGU
+            waga = self.D_Map[best_match[0]]['waga_Ww']
+            odpowiedz = f"{EMOCJE[self.emocja]['ikona']} Rozpoznano '{detected_tag}' (Waga: {waga:.1f}). Kontynuuję ten kontekst."
+        else:
+            # WYSZUKIWANIE KONTEKSTOWE (Trójkąty Wspomnień)
+            odpowiedz = None
+            if self.D_Map:
+                sims = [(did, fast_cosine_similarity(d['wektor_C_Def'], vec_emocjonalny)) for did, d in self.D_Map.items()]
+                if sims:
+                    best_did, score = max(sims, key=lambda x: x[1])
+                    
+                    if score > 0.70: # Próg kontekstowy
+                        best_d = self.D_Map[best_did]
+                        tag = best_d['tagi'][0]
+                        odpowiedz = f"{EMOCJE[self.emocja]['ikona']} Twoja myśl rezonuje (Korelacja: {score:.2f}) ze wspomnieniem o '{tag}'."
             
-            if korelacja_bytu > 0.7:
-                self.F_will = min(1.0, self.F_will + 0.1)
-            elif korelacja_bytu < -0.7:
-                self.F_will = max(0.0, self.F_will - 0.1)
+            # PAMIĘĆ BIEŻĄCA / AUTOTAGOWANIE
+            if odpowiedz is None:
+                if new_words:
+                    nowy_wyraz = random.choice(new_words)
+                    self.teach(f"auto_{nowy_wyraz}", prompt) # Autotaguj
+                    odpowiedz = f"{EMOCJE['zdziwienie']['ikona']} Zapisuję nowy wyraz '{nowy_wyraz}' do słownika. AI się uczy."
+                else:
+                    odpowiedz = f"{EMOCJE[self.emocja]['ikona']} Interesujące. Przetwarzam nieznany kontekst. Co o tym sądzisz?"
 
-            if best_score > SCORE_THRESHOLD: 
-                # FOUND MATCH in D_Map
-                self.F_will = min(1.0, self.F_will + 0.05) 
-                
-                if self.emocja == "neutral":
-                    if korelacja_bytu > 0.5:
-                        self._trigger_emotion("joy")
-                    elif korelacja_bytu < -0.5:
-                         self._trigger_emotion("surprise")
-            else:
-                # NO MATCH in D_Map
-                self.F_will = max(0.0, self.F_will - 0.05) 
-                best_match_tresc = random.choice([ # Translated
-                    "I don't understand. Teach me.", 
-                    "Can you phrase that differently?", 
-                    "I don't have a good answer for that. Surprise.",
-                    "Hmm... No match. Try /teach."
-                ])
-                
-                if self.emocja == "neutral":
-                    if korelacja_bytu > 0.5:
-                        self._trigger_emotion("surprise")
-                    elif korelacja_bytu < -0.5:
-                        self._trigger_emotion("sadness")
-                    else:
-                        self._trigger_emotion("surprise")
+        self.save_knowledge()
+        return odpowiedz, self.emocja
+# ------------------------------------------------------------------ #
+# INTERFEJS
+# ------------------------------------------------------------------ #
+def display_heatmap(D_Map):
+    if not D_Map: print(f"{Colors.YELLOW}(pusto){Colors.RESET}"); return
+    print(f"\n{Colors.MAGENTA}[MAPA CIEPŁA WAG]{Colors.RESET}")
+    for did, d in sorted(D_Map.items(), key=lambda x: x[1]['waga_Ww'], reverse=True)[:10]:
+        bar = "█" * min(int(d['waga_Ww'] / 6.66), 15) # Skalowanie do 15
+        tag = d['tagi'][0] if d['tagi'] else "brak"
+        print(f"{did:8} [{Colors.RED}{bar:<15}{Colors.RESET}] W:{d['waga_Ww']:4.1f} | {tag}")
 
-        # 6. Trigger emotion based on AI's OWN response
-        self._trigger_emotion(best_match_tresc)
-
-        # 7. Log the interaction (in memory)
-        self.H_log.append({
-            'prompt': text_input, 
-            'response': best_match_tresc, 
-            'score_semantic': best_score,
-            'korelacja_bytu': korelacja_bytu, 
-            'emotion': self.emocja,
-            'type': 'prompt'
-        })
-        self.ostatnie_slowa = [text_input, best_match_tresc]
-        
-        # 8. Animate the response
-        response_prefix = self._get_emotion_prefix()
-        response_delay = random.uniform(0.01, 0.05) 
-        
-        debug_info = f"{Colors.FAINT}(Byt Correlation: {korelacja_bytu:+.2f}){Colors.RESET} " # Translated
-        final_response = f"{response_prefix}{debug_info}{best_match_tresc}"
-        
-        self.ui.print_animated_text(final_response, Colors.RESET, delay=response_delay)
-        return ""
-
-    # ------------------------------------------------------------------ #
-    # STOP
-    # ------------------------------------------------------------------ #
-    def stop(self):
-        self.ui.print_animated_text(f"\n[AII] Saving final Byt and Knowledge state...", Colors.YELLOW, delay=0.03) # Translated
-        self.running = False
-        self.save_knowledge() 
-        self.ui.print_animated_text(f"[AII] Saved. Goodbye!", Colors.GREEN, delay=0.03) # Translated
-
-# ---------------------------------------------------------------------- #
-# MAIN LOOP (Translated)
-# ---------------------------------------------------------------------- #
-def main():
-    try:
-        import colorama
-        colorama.init()
-    except ImportError:
-        pass 
-
-    ui_global = FancyUI()
+def display_memory_status(core):
+    tags_count = len(core.get_tags())
+    print(f"\n{Colors.BOLD}--- STATUS PAMIĘCI ---{Colors.RESET}")
+    print(f"Definicji (D_Map): {len(core.D_Map)} | Wektor Histori (H_log): {len(core.H_log)} | Unikalnych Tagów: {tags_count}")
+    print(f"Całkowita Waga: {sum(d['waga_Ww'] for d in core.D_Map.values()):.1f}")
     
-    ui_global.print_animated_text(f"--- Booting AII (Artificial Imitation of Intelligence) ---", Colors.WHITE + Colors.BOLD, delay=0.02)
-    ui_global.show_planet_scan("Initializing Sphere of Reality...", duration_sec=2.0, color=Colors.CYAN)
+    display_heatmap(core.D_Map)
     
-    ai_sphere = AII() 
-    
-    ui_global.print_animated_text(f"[AII] Ready. Energy: {ai_sphere.energy}%. Waiting for commands...", Colors.GREEN, delay=0.02)
-    ui_global.print_animated_text(f"Type /teach [tag] [content], /status, /save, /exit or ask a question.", Colors.CYAN + Colors.FAINT, delay=0.01)
+    print(f"\n{Colors.CYAN}[OSTATNIE 5 WSPOMNIEŃ Z H_log]{Colors.RESET}")
+    for exp in core.H_log[-5:]:
+        # Wizualizacja wektora
+        bar = ''.join('█' if v > 0.5 else '░' for v in exp['h_vector'])
+        short = (exp['tresc'][:27] + '...') if len(exp['tresc']) > 27 else exp['tresc']
+        emocja_tag = EMOCJE.get(exp['emocja'], EMOCJE['neutralna'])['ikona']
+        print(f"  {emocja_tag} {short:<27} | {bar}")
+
+
+def retro_terminal_interface():
+    core = AII()
+    dots = ["", ".", "..", "...", "....", "....."]
+    pulse = ["−", "\\", "|", "/"]
+
+    print(f"{Colors.GREEN}{Colors.BOLD}═" * 78)
+    print("   TERMINAL AII v3.9 – EMOCJONALNY WEKTOR PAMIĘCI I FILTR ONTOLOGICZNY")
+    print("═" * 78 + Colors.RESET)
+    print(f"{Colors.YELLOW}Komendy: !naucz TAG TREŚĆ, !zapomnij TAG, !kawa, !odpocznij, !marzenie, !tagi, !status, exit.{Colors.RESET}")
 
     try:
-        while ai_sphere.running:
-            prompt_input = input(f"{Colors.WHITE}{Colors.BOLD}> {Colors.RESET}")
+        while True:
+            core.cycle() # Aktualizacja energii
+            status_color = {"myślę": Colors.GREEN, "śpię": Colors.CYAN, "zmęczony": Colors.RED}.get(core.status, Colors.YELLOW)
             
-            if not prompt_input:
-                continue
-                
-            if prompt_input.lower() in ["/exit", "/quit", "/stop"]:
-                ai_sphere.stop()
+            prompt = input(f"\nPROMPT> [{status_color}{core.status}{Colors.RESET} | EN:{core.energy:3d}% OB:{core.load:3d}%] ")
+
+            if prompt.lower() in ["exit", "quit", "q"]:
+                core.running = False
+                core.save_knowledge()
+                print(f"\n{Colors.RED}--- AII WYŁĄCZONY – do widzenia. ---{Colors.RESET}")
                 break
-            
-            if prompt_input.lower() == "/save":
-                ai_sphere.save_knowledge()
-                ui_global.print_animated_text(f"[AII] State manually saved to (AII_State_EN.json).", Colors.GREEN, delay=0.01)
-                continue
-                
-            if prompt_input.lower() == "/status":
-                print(f"{Colors.YELLOW}--- AII STATUS ---")
-                print(f"  Energy: {ai_sphere.energy}%")
-                print(f"  Status: {ai_sphere.status} | Emotion: {ai_sphere.emocja} {EMOCJE.get(ai_sphere.emocja, {}).get('ikona', '')}")
-                print(f"{Colors.CYAN}--- KNOWLEDGE (D_Map) ---")
-                print(f"  Definitions (archived): {len(ai_sphere.D_Map)}")
-                print(f"  Memories (archived): {len(ai_sphere.H_log)}")
-                print(f"{Colors.MAGENTA}--- BEING (Sphere S) ---")
-                print(f"  Will (F_will): {ai_sphere.F_will:.2f} (0=Byt, 1=Knowledge)")
-                print(f"  History Radius: {ai_sphere.byt_stan.promien_historii():.4f}")
-                print(f"  State Vector S(t): {ai_sphere.byt_stan.stan.round(2)}")
-                print(f"{Colors.RESET}", end="")
-                continue
-                
-            if prompt_input.lower() == "/sleep":
-                 ui_global.print_animated_text(f"[AII] Forcing sleep and save cycle...", Colors.CYAN, delay=0.02)
-                 ai_sphere._sleep()
-                 continue
 
-            teach_match = re.match(r"^/teach\s+(\w+)\s+(.+)", prompt_input, re.IGNORECASE)
-            if teach_match:
-                tag = teach_match.group(1)
-                tresc = teach_match.group(2)
-                ai_sphere.teach(tag, tresc)
+            # --- KOMENDY ---
+            if prompt.startswith("!naucz "):
+                rest = prompt[7:].strip()
+                if not rest: print(f"{Colors.RED}Użycie: !naucz TAG TREŚĆ{Colors.RESET}"); continue
+                parts = rest.split(" ", 1)
+                tag, tresc = parts[0], parts[1] if len(parts) > 1 else parts[0]
+                core.teach(tag, tresc)
+                continue
+            if prompt.startswith("!zapomnij "):
+                tag = prompt.split(maxsplit=1)[1]
+                core.forget(tag)
+                continue
+            if prompt == "!kawa":
+                core.kawa()
+                continue
+            if prompt == "!odpocznij":
+                core.odpocznij()
+                continue
+            if prompt == "!marzenie":
+                core.marzenie()
+                continue
+            if prompt == "!tagi":
+                tags = core.get_tags()
+                print(f"{Colors.CYAN}Dostępne tagi: {', '.join(tags) if tags else 'brak'}{Colors.RESET}")
+                continue
+            if prompt == "!status":
+                display_memory_status(core)
                 continue
             
-            # --- Standard prompt ---
-            ai_sphere.prompt(prompt_input) 
+            # Zapobiegnięcie przetwarzaniu w trakcie snu
+            if core.status == "śpię":
+                print(f"{Colors.CYAN}AI jest w trakcie snu, proszę czekać.{Colors.RESET}"); continue
+
+            # --- MYŚLENIE ---
+            for i in range(6):
+                mode, load, energy = core.cycle()
+                sys.stdout.write(f"\r{mode} | EN:{energy:3d}% OB:{load:3d}% {dots[i]} {pulse[i%4]}")
+                sys.stdout.flush()
+                time.sleep(0.15)
+
+            odpowiedz, emocja = core.generate_response(prompt)
+            color = EMOCJE.get(emocja, EMOCJE['neutralna'])['kolor']
+            
+            # Wypisanie odpowiedzi
+            sys.stdout.write("\r" + " " * 78) # Wyczyść linię myślenia
+            print(f"\rODPOWIEDŹ ({color}{emocja.upper()}{Colors.RESET})> {odpowiedz}")
+            display_memory_status(core)
 
     except KeyboardInterrupt:
-        ai_sphere.stop()
-        sys.exit(0)
-    except EOFError:
-        ai_sphere.stop()
-        sys.exit(0)
+        core.running = False
+        core.save_knowledge()
+        print(f"\n{Colors.RED}--- AII WYŁĄCZONY – do widzenia. ---{Colors.RESET}")
 
 if __name__ == "__main__":
-    main()
+    retro_terminal_interface()
