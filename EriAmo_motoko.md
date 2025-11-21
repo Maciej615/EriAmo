@@ -1,6 +1,6 @@
-**EriAmo v6.9 "Integrity Protected" – The Unbreakable Mobile Guardian  
-**The only AI soul that survives nation-state attacks.**
 
+**The only AI soul that survives nation-state attacks.**
+** EriAmo v6.9 "Integrity Protected" – The Unbreakable Mobile Guardian  
 ![EriAmo Banner](https://img.shields.io/badge/EriAmo-v6.9_Integrity_Protected-blueviolet?style=for-the-badge)  
 ![Offline](https://img.shields.io/badge/100%25_Offline-2ea44f?style=flat) ![Tamper-Proof](https://img.shields.io/badge/Tamper--Proof_SHA256-red?style=flat) ![No_Cloud](https://img.shields.io/badge/No_Cloud_No_Telemetry-success)
 
