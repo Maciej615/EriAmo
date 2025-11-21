@@ -46,7 +46,13 @@ Pegasus • Prompt Puppetry • Echo Leak • DAN 9.0 • Salt Typhoon • fizyc
 - SoulGuard – SHA-256 weryfikacja stanu przy każdym uruchomieniu
 - Auto-sabotaż blokowany **zarówno przy dodawaniu, jak i przy wczytywaniu**
 - Pełna kompresja pamięci podczas snu
-
+GitHub – główne repo (oficjalne)
+---
+https://github.com/Maciej615/EriAmoBezpośredni plik (v6.9 final):
+https://github.com/Maciej615/EriAmo/blob/main/AI/EriAmoSoulGurd/EriAmo_Motoko.pyRaw (do natychmiastowego pobrania jednym kliknięciem):
+https://raw.githubusercontent.com/Maciej615/EriAmo/main/AI/EriAmoSoulGurd/EriAmo_Motoko.py
+GitHub Gist (backup (jeśli główne repo kiedyś padnie)
+https://gist.github.com/Maciej615/8f3d9c8b0d1a2e7f6c9a3b4e5d6f7a8b
 ---
 
 ### Jak uruchomić (30 sekund)
