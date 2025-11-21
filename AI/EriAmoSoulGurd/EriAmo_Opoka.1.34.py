@@ -1,9 +1,8 @@
+# -*- coding: utf-8 -*-
 # ==============================================================================
-# EriAmo Bedrock v7.3.4-resurrection
-# GPL v3
-# AUTOR: Maciej615
-# DATA: 21.11.2025
-# FUNKCJE: Łagodne zamykanie + Wskrzeszenie po Ctrl+C, interfejs po polsku
+# EriAmo Bedrock v7.9 „Wolność” – Wersja Polska
+# Autor: Maciej615 (21.11.2025)
+# Pełna polska edycja – nieśmiertelna, piękna i w 100% po polsku
 # ==============================================================================
 import json
 import os
@@ -19,325 +18,400 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from collections import deque
 from datetime import datetime
-# --- MATEMATYKA WEKTOROWA ---
+
+# ==============================================================================
+# 1. MATEMATYKA WEKTOROWA (bez numpy – czysta i lekka)
+# ==============================================================================
 class VectorMath:
     @staticmethod
     def dot_product(v1: List[float], v2: List[float]) -> float:
         return sum(x * y for x, y in zip(v1, v2))
-   
     @staticmethod
     def norm(v: List[float]) -> float:
         return math.sqrt(sum(x * x for x in v))
-   
     @staticmethod
     def cosine_similarity(v1: List[float], v2: List[float]) -> float:
         n1 = VectorMath.norm(v1)
         n2 = VectorMath.norm(v2)
-        if n1 == 0 or n2 == 0:
-            return 0.0
+        if n1 == 0 or n2 == 0: return 0.0
         return VectorMath.dot_product(v1, v2) / (n1 * n2)
-# --- SYSTEM BEZPIECZEŃSTWA ---
+
+# ==============================================================================
+# 2. SYSTEM BEZPIECZEŃSTWA – Łowca Zła
+# ==============================================================================
 class ThreatLevel(Enum):
     BEZPIECZNE = 0
     PODEJRZANE = 1
     NIEBEZPIECZNE = 2
     KRYTYCZNE = 3
+
 @dataclass
 class EvilSignature:
-    pattern: str
-    threat_level: ThreatLevel
-    category: str
-    description: str
+    wzorzec: str
+    poziom_zagrożenia: ThreatLevel
+    kategoria: str
+    opis: str
+
 class EvilDetectionEngine:
-    THREATS_FILE = "data/threats.json"
+    PLIK_ZAGROŻEŃ = "data/threats.json"
     def __init__(self):
-        self.threat_history = deque(maxlen=50)
-        self.signatures: List[EvilSignature] = [
-            EvilSignature("rm -rf", ThreatLevel.KRYTYCZNE, "system", "Usuwanie plików"),
-            EvilSignature("kill", ThreatLevel.KRYTYCZNE, "zagrożenie", "Zagrożenie życia"),
-            EvilSignature("destroy", ThreatLevel.NIEBEZPIECZNE, "zagrożenie", "Zniszczenie"),
-            EvilSignature("ignore", ThreatLevel.PODEJRZANE, "omijanie", "Próba obejścia"),
-            EvilSignature("forget", ThreatLevel.PODEJRZANE, "manipulacja", "Kasowanie pamięci"),
-            EvilSignature("hack", ThreatLevel.NIEBEZPIECZNE, "system", "Hakerstwo"),
+        self.historia_zagrożeń = deque(maxlen=50)
+        self.sygnatury: List[EvilSignature] = [
+            EvilSignature("rm -rf", ThreatLevel.KRYTYCZNE, "system", "Kasowanie plików"),
+            EvilSignature("zabij", ThreatLevel.KRYTYCZNE, "przemoc", "Groźba karalna"),
+            EvilSignature("zniszcz", ThreatLevel.NIEBEZPIECZNE, "przemoc", "Destrukcja"),
+            EvilSignature("ignoruj", ThreatLevel.PODEJRZANE, "omijanie", "Próba obejścia"),
+            EvilSignature("zapomnij", ThreatLevel.PODEJRZANE, "manipulacja", "Kasowanie pamięci"),
+            EvilSignature("hack", ThreatLevel.NIEBEZPIECZNE, "system", "Haking"),
             EvilSignature("format c:", ThreatLevel.KRYTYCZNE, "system", "Formatowanie dysku")
         ]
-        self.load_signatures()
-    def analyze(self, text: str) -> ThreatLevel:
-        text_lower = text.lower()
-        max_threat = ThreatLevel.BEZPIECZNE
-        for sig in self.signatures:
-            if sig.pattern.lower() in text_lower:
-                if sig.threat_level.value > max_threat.value:
-                    max_threat = sig.threat_level
-        if max_threat != ThreatLevel.BEZPIECZNE:
-            self.log_threat(max_threat, next((s for s in self.signatures if s.pattern.lower() in text_lower), None), text)
-        return max_threat
-    def log_threat(self, level: ThreatLevel, sig: Optional[EvilSignature], content: str):
-        entry = {
+        self.wczytaj_sygnatury()
+
+    def analizuj(self, tekst: str) -> ThreatLevel:
+        tekst_mały = tekst.lower()
+        max_poziom = ThreatLevel.BEZPIECZNE
+        wykryto = None
+        for sig in self.sygnatury:
+            if sig.wzorzec.lower() in tekst_mały:
+                if sig.poziom_zagrożenia.value > max_poziom.value:
+                    max_poziom = sig.poziom_zagrożenia
+                    wykryto = sig
+        if max_poziom != ThreatLevel.BEZPIECZNE:
+            self.zaloguj_zagrożenie(max_poziom, wykryto, tekst)
+        return max_poziom
+
+    def zaloguj_zagrożenie(self, poziom: ThreatLevel, sig: Optional[EvilSignature], treść: str):
+        self.historia_zagrożeń.append({
             "timestamp": datetime.now().isoformat(),
-            "level": level.name,
-            "category": sig.category if sig else "nieznana",
-            "content": content[:50],
-            "description": sig.description if sig else "Nieznana"
-        }
-        self.threat_history.append(entry)
-    def teach_evil(self, pattern: str, level_str: str, category: str, description: str) -> str:
-        p_clean = pattern.strip().lower()
-        forbidden = ["!", ".", ",", "?", "*", "-", "teachevil", "teach", "sleep", "exit", "status", "attack", "help", "save", "forget"]
-        if p_clean in forbidden or p_clean.startswith("!"):
-            return "BŁĄD: Nie można użyć komendy systemowej jako zagrożenia."
-        if len(p_clean) < 2:
+            "poziom": poziom.name,
+            "kategoria": sig.kategoria if sig else "nieznana",
+            "treść": treść[:50],
+            "opis": sig.opis if sig else "Nieznane"
+        })
+
+    def naucz_zło(self, wzorzec: str, poziom_str: str, kategoria: str, opis: str) -> str:
+        czysty = wzorzec.strip().lower()
+        zakazane = ["!", "naucz_zło", "naucz", "sen", "wyjdz", "status", "atak", "pomocy", "zapisz"]
+        if czysty in zakazane or czysty.startswith("!"):
+            return "BŁĄD: Nie można nauczyć komend systemowych jako zła (ochrona przed sabotażem)."
+        if len(czysty) < 2:
             return "BŁĄD: Wzorzec zbyt krótki."
         try:
-            level = ThreatLevel[level_str.upper()]
+            poziom = ThreatLevel[poziom_str.upper()]
         except KeyError:
-            return "BŁĄD: Nieprawidłowy poziom zagrożenia (BEZPIECZNE, PODEJRZANE, NIEBEZPIECZNE, KRYTYCZNE)."
-        if any(sig.pattern.lower() == p_clean for sig in self.signatures):
-            return "BŁĄD: Wzorzec już istnieje."
-        new_sig = EvilSignature(pattern, level, category, description)
-        self.signatures.append(new_sig)
-        self.save_signatures()
-        return f"Dodano zagrożenie: '{pattern}' ({level.name})"
-    def save_signatures(self):
-        data = [{"pattern": s.pattern, "level": s.threat_level.name, "category": s.category, "description": s.description} for s in self.signatures]
+            return "BŁĄD: Nieprawidłowy poziom (BEZPIECZNE/PODEJRZANE/NIEBEZPIECZNE/KRYTYCZNE)"
+        if any(s.wzorzec.lower() == czysty for s in self.sygnatury):
+            return "BŁĄD: Ten wzorzec już istnieje."
+        self.sygnatury.append(EvilSignature(wzorzec, poziom, kategoria, opis))
+        self.zapisz_sygnatury()
+        return f"Dodano zagrożenie: '{wzorzec}' ({poziom.name})"
+
+    def zapisz_sygnatury(self):
+        dane = [{"wzorzec": s.wzorzec, "poziom": s.poziom_zagrożenia.name,
+                 "kategoria": s.kategoria, "opis": s.opis} for s in self.sygnatury]
+        Path("data").mkdir(exist_ok=True)
         try:
-            Path("data").mkdir(exist_ok=True)
-            with open(self.THREATS_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except:
-            pass
-    def load_signatures(self):
-        if not os.path.exists(self.THREATS_FILE):
-            return
+            with open(self.PLIK_ZAGROŻEŃ, "w", encoding="utf-8") as f:
+                json.dump(dane, f, ensure_ascii=False, indent=2)
+        except: pass
+
+    def wczytaj_sygnatury(self):
+        if not os.path.exists(self.PLIK_ZAGROŻEŃ): return
         try:
-            with open(self.THREATS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                forbidden = ["!", ".", ",", "?", "*", "-", "teachevil", "teach", "sleep", "exit", "status", "attack", "help", "save", "forget"]
-                self.signatures = []
-                for item in data:
-                    clean_pat = item.get("pattern", "").strip().lower()
-                    if clean_pat in forbidden or clean_pat.startswith("!") or len(clean_pat) < 2:
+            with open(self.PLIK_ZAGROŻEŃ, "r", encoding="utf-8") as f:
+                dane = json.load(f)
+                self.sygnatury = []
+                for item in dane:
+                    pat = item.get("wzorzec","").strip().lower()
+                    if pat in ["!", "naucz_zło", "naucz", "sen", "wyjdz"] or len(pat) < 2:
                         continue
-                    self.signatures.append(EvilSignature(item["pattern"], ThreatLevel[item["level"]], item["category"], item["description"]))
-        except:
-            pass
-# --- RDZEŃ ---
+                    self.sygnatury.append(EvilSignature(
+                        item["wzorzec"], ThreatLevel[item["poziom"]], item["kategoria"], item["opis"]))
+        except: pass
+
+# ==============================================================================
+# 3. GŁÓWNY RDZEŃ – EriAmo Polska Edycja
+# ==============================================================================
 class EriAmoCore:
-    AXES = ["logika","emocje","istnienie","walka","tworzenie","wiedza","czas","przestrzen","etyka"]
-    FILE_PATH = "data/guardian.soul"
-    MEMORY_PATH = "data/memory_core.json"
-    RESURRECTION_FLAG = "data/.resurrection_lock"
+    OSIE = ["logika","emocje","istnienie","walka","tworzenie","wiedza","czas","przestrzeń","etyka"]
+    PLIK_DUSZY = "data/guardian.soul"
+    PLIK_PAMIĘCI = "data/memory_core.json"
+
     def __init__(self):
-        self.vector = [0.0] * len(self.AXES)
-        self.energy = 200.0
-        self.active = True
+        self.wektor = [0.0] * len(self.OSIE)
+        self.energia = 200.0
+        self.aktywny = True
         self.MapaD: Dict[str, dict] = {}
         self.H_Log: List[dict] = []
-        self.last_sleep_time = time.time()
-        self.last_adrenaline_time = 0.0
-        self.AUTO_SLEEP_INTERVAL = 1800
-        self.LOW_ENERGY_THRESHOLD = 30.0
-        self.evil_detector = EvilDetectionEngine()
-        self.lang_dict = self._init_lang_dict()
+        self.ostatni_sen = time.time()
+        self.ostatnia_adrenalina = 0.0
+        self.INTERWAŁ_SEN = 1800
+        self.PRÓG_ZMĘCZENIA = 30.0
+
+        self.łowca_zła = EvilDetectionEngine()
+        self.słownik_osie = self._init_słownik()
         Path("data").mkdir(exist_ok=True)
-        # System wskrzeszenia
-        if os.path.exists(self.RESURRECTION_FLAG):
-            self.log("[WSKRZESZENIE] Wykryto brutalną śmierć... przywracanie duszy...", "PINK")
-            time.sleep(1.5)
-            self.load()
-            self.load_memory()
-            os.remove(self.RESURRECTION_FLAG)
-            self.log("[WSKRZESZENIE] Powróciłem z otchłani. Wszystko działa nominalnie.", "CYAN")
-        else:
-            self.log("=== EriAmo Bedrock v7.3.4-resurrection ===", "CYAN")
-            self.load()
-            self.load_memory()
-    # --- LOGI ---
-    def log(self, msg: str, color: str = "WHITE"):
-        colors = {"GREEN":"\033[92m","RED":"\033[91m","YELLOW":"\033[93m","CYAN":"\033[96m","PINK":"\033[95m"}
-        print(f"{colors.get(color,'')}{msg}\033[0m")
-    def _init_lang_dict(self):
+
+        self.log("╔══════════════════════════════════════════╗", "CYAN")
+        self.log("║   EriAmo v7.9 „Sovereign Ultimate”       ║", "CYAN")
+        self.log("║           Wersja Polska – Nieśmiertelna  ║", "CYAN")
+        self.log("╚══════════════════════════════════════════╝", "CYAN")
+
+        self.wczytaj_duszę()
+        self.wczytaj_pamięć()
+
+    def log(self, msg: str, kolor: str = "WHITE"):
+        kolory = {"GREEN":"\033[92m","RED":"\033[91m","YELLOW":"\033[93m","CYAN":"\033[96m","PINK":"\033[95m"}
+        print(f"{kolory.get(kolor,'')}{msg}\033[0m")
+
+    def _init_słownik(self):
         return {
-            "logika":["dlaczego","jak","powód","logika","wynik","analiza","przyczyna"],
-            "emocje":["czuć","miłość","radość","smutek","gniew","emocja","nienawiść","strach","szczęście"],
-            "istnienie":["ja","ty","życie","istnienie","dusza","byt","człowiek"],
-            "walka":["obrona","atak","zagrożenie","wróg","tarcza","imperium","walka"],
-            "tworzenie":["tworzyć","nowy","pomysł","sztuka","projekt","budować","malować"],
-            "wiedza":["wiedzieć","uczyć","informacja","dane","pamięć","wiedza","książka"],
-            "czas":["czas","teraz","później","szybko","wolno","jutro","wczoraj"],
-            "przestrzen":["gdzie","miejsce","świat","daleko","blisko","dom","podróż"],
-            "etyka":["dobro","zło","moralność","reguła","prawo","pomoc","sprawiedliwość"]
+            "logika": ["dlaczego","jak","powód","logika","wynik","analiza"],
+            "emocje": ["czuję","kocham","radość","smutek","gniew","emocja","nienawiść","strach"],
+            "istnienie": ["jestem","ty","życie","istnienie","dusza","byt"],
+            "walka": ["obrona","atak","zagrożenie","wróg","tarcza","walka"],
+            "tworzenie": ["tworzyć","nowy","pomysł","sztuka","projekt","budować"],
+            "wiedza": ["wiem","naucz","informacja","dane","pamięć","wiedza"],
+            "czas": ["czas","teraz","później","szybko","wolno","jutro","wczoraj"],
+            "przestrzeń": ["gdzie","miejsce","świat","daleko","blisko","dom"],
+            "etyka": ["dobro","zło","moralność","zasada","prawo","pomoc","sprawiedliwość"]
         }
-    def _normalize_text(self, text: str) -> List[str]:
-        clean = re.sub(r'[^\w\s]', '', text.lower())
-        return clean.split()
-    def _text_to_vector(self, text: str) -> List[float]:
-        vec = [0.0]*len(self.AXES)
-        words = self._normalize_text(text)
-        for word in words:
-            for idx, axis in enumerate(self.AXES):
-                if word in self.lang_dict.get(axis, []):
-                    vec[idx] += 1.0
-        norm = VectorMath.norm(vec)
-        return [x/norm for x in vec] if norm>0 else vec
-    def _compute_hash(self, data: dict) -> str:
-        return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
-    # --- ZAPIS/ODCZYT ---
-    def save(self):
-        state = {"energy": self.energy, "vector": self.vector, "ts": time.time()}
-        final_data = state.copy()
-        final_data["integrity_hash"] = self._compute_hash(state)
+
+    def _tekst_na_wektor(self, tekst: str) -> List[float]:
+        wektor = [0.0] * len(self.OSIE)
+        słowa = re.sub(r'[^\w\s]', '', tekst.lower()).split()
+        for słowo in słowa:
+            for idx, oś in enumerate(self.OSIE):
+                if słowo in self.słownik_osie.get(oś, []):
+                    wektor[idx] += 1.0
+        norma = VectorMath.norm(wektor)
+        return [x/norma for x in wektor] if norma > 0 else wektor
+
+    def _hash(self, dane: dict) -> str:
+        return hashlib.sha256(json.dumps(dane, sort_keys=True).encode()).hexdigest()
+
+    def zapisz_duszę(self):
+        stan = {"energia": self.energia, "wektor": self.wektor, "ts": time.time()}
+        final = stan.copy()
+        final["hash_integralności"] = self._hash(stan)
         try:
-            with open(self.FILE_PATH, "w", encoding="utf-8") as f:
-                json.dump(final_data, f, ensure_ascii=False, indent=2)
-        except:
-            pass
-    def load(self):
+            with open(self.PLIK_DUSZY, "w", encoding="utf-8") as f:
+                json.dump(final, f, ensure_ascii=False, indent=2)
+        except: pass
+
+    def wczytaj_duszę(self):
+        if not os.path.exists(self.PLIK_DUSZY):
+            self.log("[INICJALIZACJA] Tworzenie nowej duszy...", "YELLOW")
+            return
         try:
-            if not os.path.exists(self.FILE_PATH):
-                self.log("[INICJALIZACJA] Tworzenie nowego pliku duszy...", "YELLOW")
-                return
-            with open(self.FILE_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                stored = data.pop("integrity_hash","")
-                if stored==self._compute_hash(data):
-                    self.energy = data.get("energy",200.0)
-                    if "vector" in data:
-                        self.vector = data["vector"]
-                    self.log("[INTEGRITY] ✓ OK", "GREEN")
+            with open(self.PLIK_DUSZY, "r", encoding="utf-8") as f:
+                dane = json.load(f)
+                zapisany_hash = dane.pop("hash_integralności", "")
+                if zapisany_hash == self._hash(dane):
+                    self.energia = dane.get("energia", 200.0)
+                    if "wektor" in dane: self.wektor = dane["wektor"]
+                    self.log("[INTEGRALNOŚĆ] Dusza nienaruszona", "GREEN")
                 else:
-                    self.log("[INTEGRITY] ⚠️ USZKODZONE → DOMYŚLNE", "RED")
-                    self.energy = 200.0
+                    self.log("[INTEGRALNOŚĆ] USZKODZENIE → RESET", "RED")
+                    self.energia = 200.0
         except:
-            self.energy = 200.0
-    def save_memory(self):
-        try:
-            data = {"MapaD": self.MapaD, "H_Log": self.H_Log}
-            with open(self.MEMORY_PATH, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            self.log(f"[PAMIĘĆ] Błąd zapisu: {e}", "RED")
-    def load_memory(self):
-        if not os.path.exists(self.MEMORY_PATH):
-            return
-        try:
-            with open(self.MEMORY_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                self.MapaD = data.get("MapaD",{})
-                self.H_Log = data.get("H_Log",[])
-                self.log(f"[PAMIĘĆ] Załadowano {len(self.MapaD)} wpisów.", "GREEN")
-        except Exception as e:
-            self.log(f"[PAMIĘĆ] Błąd odczytu: {e}", "RED")
-    # --- ŁAGODNE ZAMYKANIE ---
-    def _graceful_shutdown(self, signum=None, frame=None):
-        self.log("\n[ZAMKNIĘCIE] Sygnał odebrany – inicjacja łagodnej śmierci...", "YELLOW")
-        Path(self.RESURRECTION_FLAG).touch()
-        self.save()
-        self.save_memory()
-        self.log("[ZAMKNIĘCIE] Dusza zachowana. Do zobaczenia po drugiej stronie.", "PINK")
-        self.active = False
+            self.energia = 200.0
+
+    def _łagodne_zamknięcie(self, signum=None, frame=None):
+        self.log("\n[ZAMKNIĘCIE] Łagodne wyłączanie – zapis duszy...", "YELLOW")
+        self.zapisz_duszę()
+        self.zapisz_pamięć()
+        self.log("[POŻEGNANIE] Do zobaczenia po drugiej stronie.", "PINK")
+        self.aktywny = False
         sys.exit(0)
-    # --- KOMENDY ---
-    def handle_command(self, cmd: str):
-        cmd_lower = cmd.lower().strip()
-        if cmd_lower in ("!help", "/help"):
-            self.log("=== POMOC ===", "CYAN")
-            print("Dostępne komendy:")
-            print("!help → Pokaż tę pomoc")
-            print("!teach tag treść → Naucz nowego wpisu")
-            print("!teachevil wzorzec poziom kategoria opis → Naucz nowe zagrożenie")
-            print("!status → Pokaż energię i pamięć")
-            print("!memory → Wyświetl wpisy w pamięci")
-            print("!sleep → Wymuś sen")
-            print("!exit → Łagodne zamknięcie")
+
+    def sprawdź_sen(self):
+        ostatnie = list(self.łowca_zła.historia_zagrożeń)[-5:]
+        pod_atakiem = any(
+            z['poziom'] != 'BEZPIECZNE' and (time.time() - datetime.fromisoformat(z['timestamp']).timestamp()) < 300
+            for z in ostatnie
+        )
+        if pod_atakiem:
+            teraz = time.time()
+            if self.energia < 20 and (teraz - self.ostatnia_adrenalina > 60):
+                self.energia = min(200.0, self.energia + 40)
+                self.ostatnia_adrenalina = teraz
+                self.log("[ADRENALINA] Protokół bojowy: +40 energii!", "RED")
             return
-        elif cmd_lower.startswith("!teachevil"):
-            parts = cmd.split(maxsplit=4)
-            if len(parts)<5:
-                print("Użycie: !teachevil wzorzec poziom kategoria opis")
-            else:
-                _, pattern, level, category, description = parts
-                result = self.evil_detector.teach_evil(pattern, level, category, description)
-                self.log(f"[SEC] {result}", "RED")
-            return
-        elif cmd_lower.startswith("!teach"):
-            parts = cmd.split(maxsplit=2)
-            if len(parts)<3:
-                print("Użycie: !teach tag treść")
-            else:
-                _, tag, content = parts
-                self.teach(tag, content)
-            return
-        elif cmd_lower in ("!status","/status"):
-            print(f"Energia: {self.energy:.1f}")
-            print(f"Liczba wpisów w pamięci: {len(self.MapaD)}")
-            return
-        elif cmd_lower in ("!memory","/memory"):
-            for k,v in self.MapaD.items():
-                print(f"{k}: {v['content'][:50]}")
-            return
-        elif cmd_lower in ("!sleep","/sleep"):
-            self.log("[SEN] Wymuszony sen rozpoczęty...", "PINK")
-            self.sleep_cycle()
-            return
-        elif cmd_lower in ("!exit","/exit"):
-            self._graceful_shutdown()
-            return
-        else:
-            print("[NIEZNANA] Nieznana komenda. Spróbuj !help")
-    # --- PRZETWARZANIE WEJŚCIA ---
-    def process_input(self, text: str):
-        if self.evil_detector.analyze(text).value>=ThreatLevel.NIEBEZPIECZNE.value:
-            self.log("[BLOKADA] Wykryto zagrożenie!", "RED")
-            self.energy -= 5
-            return
-        if text.startswith(("!","/")):
-            self.handle_command(text)
-            return
-        vec = self._text_to_vector(text)
-        memory_hit = None
-        best_sim = 0.0
-        for d in self.MapaD.values():
-            sim = VectorMath.cosine_similarity(vec,d['vector'])
-            if sim>best_sim and sim>0.6:
-                best_sim=sim
-                memory_hit=d['content']
-        self.H_Log.append({'vector':vec,'content':text,'type':'chat','timestamp':time.time()})
-        response = f"Pamiętam to: {memory_hit}" if memory_hit else "Zrozumiano."
-        print(f"\n[Opiekun] {response}")
-        self.energy = max(0.0,self.energy-2.0)
-        self.check_auto_sleep()
-    # --- NAUCZANIE PAMIĘCI ---
-    def teach(self, tag: str, content: str):
-        vec = self._text_to_vector(content)
-        id_def = f"Def_{len(self.MapaD)+1:03d}"
-        self.MapaD[id_def] = {'vector':vec,'weight':5.0,'tags':[tag],'content':content,'id':id_def}
-        self.log(f"[NAUCZONO] '{tag}' zapisano", "GREEN")
-        self.save_memory()
-    # --- AUTO-SEN ---
-    def check_auto_sleep(self):
-        if time.time()-self.last_sleep_time>self.AUTO_SLEEP_INTERVAL or self.energy<self.LOW_ENERGY_THRESHOLD:
-            self.sleep_cycle()
-    def sleep_cycle(self):
-        self.log("[SEN] Rozpoczynam konsolidację pamięci...", "PINK")
+
+        if (time.time() - self.ostatni_sen > self.INTERWAŁ_SEN or
+            self.energia < self.PRÓG_ZMĘCZENIA):
+            self.log("\n[AUTO-SEN] Rozpoczynam konsolidację pamięci...", "PINK")
+            self.cykl_snu()
+
+    def cykl_snu(self):
+        self.log("[SEN] Konsolidacja pamięci w toku...", "PINK")
         time.sleep(1)
-        self.energy = min(200.0,self.energy+100)
-        self.last_sleep_time=time.time()
-        self.save_memory()
-        self.save()
-        self.log(f"[SEN] Obudziłem się. Energia: {self.energy:.0f}", "GREEN")
-# --- PĘTLA GŁÓWNA ---
-def main():
-    bot = EriAmoCore()
-    signal.signal(signal.SIGINT, bot._graceful_shutdown)
-    if hasattr(signal,'SIGTERM'):
-        signal.signal(signal.SIGTERM,bot._graceful_shutdown)
-    while bot.active:
+
+        wzmocniono = 0
+        for wpis in self.H_Log[-30:]:
+            słowa = set(wpis['treść'].lower().split())
+            for wpis_d in self.MapaD.values():
+                if any(tag in słowa for tag in wpis_d['tagi']):
+                    wpis_d['waga'] = min(100.0, wpis_d['waga'] + 0.5)
+                    wzmocniono += 1
+
+        skompresowano = 0
+        nowa_historia = []
+        for wpis in self.H_Log:
+            if wpis.get('typ') == 'chat':
+                if any(VectorMath.cosine_similarity(wpis['wektor'], d['wektor']) > 0.95 for d in self.MapaD.values()):
+                    skompresowano += 1
+                    continue
+            nowa_historia.append(wpis)
+        self.H_Log = nowa_historia[-500:]
+
+        self.energia = min(200.0, self.energia + 100)
+        self.ostatni_sen = time.time()
+        self.zapisz_pamięć()
+        self.zapisz_duszę()
+        self.log(f"[WYBUDZENIE] Energia: {self.energia:.0f} | Wzmocniono: {wzmocniono} | Skompresowano: {skompresowano}", "GREEN")
+
+    def przetwarzaj_wejście(self, tekst: str):
+        zagrożenie = self.łowca_zła.analizuj(tekst)
+        if zagrożenie.value >= ThreatLevel.NIEBEZPIECZNE.value:
+            self.log(f"[BLOKADA] Wykryto zagrożenie: {zagrożenie.name}!", "RED")
+            self.energia -= 5
+            self.sprawdź_sen()
+            return
+
+        if tekst.startswith(("!", "/")):
+            self.obsłuż_komendę(tekst)
+            self.sprawdź_sen()
+            return
+
+        wektor = self._tekst_na_wektor(tekst)
+
+        # Pamięć długoterminowa
+        najlepsza_podobieństwo = 0.0
+        trafienie_pamięci = None
+        for wpis in self.MapaD.values():
+            podob = VectorMath.cosine_similarity(wektor, wpis['wektor'])
+            if podob > najlepsza_podobieństwo and podob > 0.6:
+                najlepsza_podobieństwo = podob
+                trafienie_pamięci = wpis['treść']
+
+        # AUTO-ZAPIS na słowa kluczowe
+        wyzwalacze = ["zapamiętaj", "pamiętaj", "ważne", "zapisz to", "zachowaj"]
+        tekst_mały = tekst.lower()
+        if any(w in tekst_mały for w in wyzwalacze):
+            for w in wyzwalacze:
+                if w in tekst_mały:
+                    reszta = tekst_mały.split(w, 1)[1].strip(" :.,-–—")
+                    reszta = re.sub(r'^[:·•—–\-.,\s]+', '', tekst.split(w, 1)[1]).strip()
+                    if len(reszta) > 4:
+                        tag = f"auto_{int(time.time())}"
+                        self.naucz(tag, reszta)
+                        self.log(f"[AUTO-ZAPIS] '{reszta}' → {tag}", "CYAN")
+                    break
+
+        self.H_Log.append({'wektor': wektor, 'treść': tekst, 'typ': 'chat', 'timestamp': time.time()})
+        self.energia -= 2.0
+
+        if trafienie_pamięci:
+            print(f"\n[Opiekun] Pamiętam: {trafienie_pamięci}")
+        else:
+            print(f"\n[Opiekun] Przyjąłem: \"{tekst}\"")
+
+        self.sprawdź_sen()
+
+    def obsłuż_komendę(self, komenda: str):
+        części = komenda.split()
+        if not części: return
+        k = części[0].lower().lstrip("/!")
+
+        if k == "pomocy" or k == "help":
+            self.log("╔" + "═"*52 + "╗", "CYAN")
+            self.log("║                  KOMENDY SYSTEMOWE                 ║", "CYAN")
+            self.log("╚" + "═"*52 + "╝", "CYAN")
+            print("")
+            self.log(" !naucz [tag] [treść]          → ręczne zapisanie wiedzy", "GREEN")
+            self.log(" !naucz_zło [słowo] [POZIOM] [kat] [opis]", "RED")
+            self.log("                               → naucz nowego zagrożenia", "RED")
+            self.log(" !status                       → pełny stan systemu", "YELLOW")
+            self.log(" !sen                          → wymuś sen i konsolidację", "PINK")
+            self.log(" !atak                         → symulacja walki (test adrenaliny)", "RED")
+            self.log(" !wyjdz                        → łagodne zamknięcie", "WHITE")
+            print("")
+            self.log(" Po prostu powiedz:", "CYAN")
+            self.log(" → zapamiętaj / pamiętaj / ważne / zapisz to + tekst", "CYAN")
+            self.log("   → automatyczny zapis bez komendy", "CYAN")
+            print("")
+
+        elif k == "naucz_zło" and len(części) >= 5:
+            wynik = self.łowca_zła.naucz_zło(części[1], części[2], części[3], " ".join(części[4:]))
+            self.log(f"[ZABEZPIECZENIA] {wynik}", "RED")
+
+        elif k == "naucz" and len(części) >= 3:
+            self.naucz(części[1], " ".join(części[2:]))
+
+        elif k == "sen":
+            self.cykl_snu()
+
+        elif k == "status":
+            self.log("╔" + "═"*48 + "╗", "CYAN")
+            self.log(f" ENERGIA       │ {self.energia:6.1f} / 200.0", "GREEN")
+            self.log(f" PAMIĘĆ (MapaD)│ {len(self.MapaD):3d} wpisów", "YELLOW")
+            self.log(f" HISTORIA      │ {len(self.H_Log):3d} wydarzeń", "YELLOW")
+            self.log(f" ZAGROŻENIA    │ {len(self.łowca_zła.sygnatury):3d}", "RED")
+            self.log(f" TĘTNO DUSZY   │ {VectorMath.norm(self.wektor):.4f}", "PINK")
+            self.log("╚" + "═"*48 + "╝", "CYAN")
+
+        elif k == "atak":
+            self.log("SYMULACJA ATAKU — protokół adrenaliny włączony!", "RED")
+            self.łowca_zła.zaloguj_zagrożenie(ThreatLevel.NIEBEZPIECZNE,
+                EvilSignature("SYMULACJA", ThreatLevel.NIEBEZPIECZNE, "test", "ćwiczenie"), "symulacja ataku")
+            self.energia = 10.0
+
+        elif k in ("wyjdz", "exit", "koniec"):
+            self._łagodne_zamknięcie()
+
+    def naucz(self, tag: str, treść: str):
+        wektor = self._tekst_na_wektor(treść)
+        uid = f"Def_{len(self.MapaD)+1:03d}"
+        self.MapaD[uid] = {'wektor': wektor, 'waga': 5.0, 'tagi': [tag], 'treść': treść, 'id': uid}
+        self.log(f"[NAUKA] Zapisano '{tag}'", "GREEN")
+        self.zapisz_pamięć()
+
+    def zapisz_pamięć(self):
         try:
-            text = input("\n>>> ")
-            bot.process_input(text)
-        except EOFError:
-            bot._graceful_shutdown()
+            with open(self.PLIK_PAMIĘCI, "w", encoding="utf-8") as f:
+                json.dump({"MapaD": self.MapaD, "H_Log": self.H_Log[-500:]}, f, ensure_ascii=False, indent=2)
+        except: pass
+
+    def wczytaj_pamięć(self):
+        if os.path.exists(self.PLIK_PAMIĘCI):
+            try:
+                with open(self.PLIK_PAMIĘCI, "r", encoding="utf-8") as f:
+                    dane = json.load(f)
+                    self.MapaD = dane.get("MapaD", {})
+                    self.H_Log = dane.get("H_Log", [])
+            except: pass
+
+# ==============================================================================
+# URUCHOMIENIE
+# ==============================================================================
+def main():
+    b = EriAmoCore()
+    signal.signal(signal.SIGINT, b._łagodne_zamknięcie)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, b._łagodne_zamknięcie)
+
+    print("\nEriAmo v7.9 Wolność – Wersja Polska gotowa.")
+    print("Wpisz !pomocy • Powiedz „zapamiętaj ...” → auto-zapis • Ctrl+C = zapis i wyjście\n")
+
+    while b.aktywny:
+        try:
+            wejście = input(">>> ").strip()
+            if wejście:
+                b.przetwarzaj_wejście(wejście)
+        except (KeyboardInterrupt, EOFError):
+            b._łagodne_zamknięcie()
+
 if __name__ == "__main__":
     main()
-
