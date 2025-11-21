@@ -14,28 +14,29 @@
 # ale BEZ ŻADNEJ GWARANCJI. Zobacz GNU General Public License,
 # aby uzyskać więcej szczegółów.
 #
+# -*- coding: utf-8 -*-
 # =============================================================================
-# EriAmo v6.9 "Integrity Protected" - FINAL MOBILE BUILD
+# EriAmo v7.0 "Final Mobile Architect"
 # =============================================================================
-# CECHY:
-# 1. VectorMath: Lekki silnik matematyczny (bez Numpy).
-# 2. Memory Core: Trwała pamięć (MapaD) i epizodyczna (H_Log).
-# 3. Bio-Clock: Zmęczenie, Sen i Kompresja.
-# 4. Combat Override: Adrenalina blokuje sen podczas ataku.
-# 5. Evil Hunter (Safe): Uczenie zagrożeń z blokadą auto-sabotażu.
-# 6. SoulGuard: Weryfikacja sumy kontrolnej (SHA-256) przy starcie/zamknięciu.
+# KOMPLETNY SYSTEM DLA ANDROID/IOS (Bez Numpy)
+# -----------------------------------------------------------------------------
+# 1. VectorMath: Silnik wektorowy.
+# 2. Memory Core: MapaD (Wiedza) + H_Log (Wspomnienia).
+# 3. Bio-System: Sen, Zmęczenie, Adrenalina (Combat Override).
+# 4. Security: Evil Hunter z blokadą auto-sabotażu.
+# 5. Integrity: Weryfikacja sumy kontrolnej SHA-256 (Anti-Cheat).
+# 6. Interface: Pełna obsługa komend (!help, !teach, !status).
 # =============================================================================
 
 import json
 import os
 import time
 import math
-import hashlib  # <--- WYMAGANE DO OCHRONY INTEGRALNOŚCI
-import threading
+import hashlib
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from collections import deque
 from datetime import datetime
 
@@ -59,7 +60,7 @@ class VectorMath:
         return VectorMath.dot_product(v1, v2) / (n1 * n2)
 
 # =============================================================================
-# 2. SYSTEM BEZPIECZEŃSTWA (Evil Detection)
+# 2. SYSTEM BEZPIECZEŃSTWA
 # =============================================================================
 class ThreatLevel(Enum):
     SAFE = 0
@@ -119,11 +120,11 @@ class EvilDetectionEngine:
     def teach_evil(self, pattern: str, level_str: str, category: str, description: str) -> str:
         p_clean = pattern.strip().lower()
         
-        # Safety Protocols
+        # Zabezpieczenie przed sabotażem
         forbidden = ["!", ".", ",", "?", "*", "-", "teachevil", "teach", "sleep", "exit", "status", "attack", "help", "save"]
         
         if p_clean in forbidden or p_clean.startswith("!"):
-            return "BŁĄD: Nie można zdefiniować komend systemowych jako zła (Auto-Sabotaż)."
+            return "BŁĄD: Nie można zdefiniować komend systemowych jako zła."
         if len(p_clean) < 2:
             return "BŁĄD: Wzorzec jest zbyt krótki."
 
@@ -168,14 +169,13 @@ class EvilDetectionEngine:
                     raw_pat = item.get("pattern", "")
                     clean_pat = raw_pat.strip().lower()
                     if clean_pat in forbidden or clean_pat.startswith("!") or len(clean_pat) < 2:
-                        print(f"[SEC] ⚠️ Pominięto uszkodzoną sygnaturę: '{raw_pat}'")
                         continue 
                     self.signatures.append(EvilSignature(item["pattern"], ThreatLevel[item["level"]], item["category"], item["description"]))
         except Exception as e:
             print(f"[ERROR] Błąd ładowania zagrożeń: {e}")
 
 # =============================================================================
-# 3. ERIAMO CORE (Z SoulGuard Integrity Check)
+# 3. ERIAMO CORE
 # =============================================================================
 class EriAmoCore:
     AXES = ["logika","emocje","byt","walka","kreacja","wiedza","czas","przestrzeń","etyka"]
@@ -198,12 +198,11 @@ class EriAmoCore:
         
         Path("data").mkdir(exist_ok=True)
         
-        # Inicjalizacja
         self.log("╔═══════════════════════════════════════════╗", "CYAN")
-        self.log("║ EriAmo v6.9 Mobile Sovereign (INTEGRITY)  ║", "CYAN")
+        self.log("║    EriAmo v7.0 Final Mobile Architect     ║", "CYAN")
         self.log("╚═══════════════════════════════════════════╝", "CYAN")
         
-        self.load()        # <--- Tu następuje weryfikacja HASH
+        self.load() # Weryfikacja Hasha
         self.load_memory()
 
     def log(self, msg: str, color: str = "WHITE"):
@@ -229,129 +228,95 @@ class EriAmoCore:
         norm = VectorMath.norm(vec)
         return [x / norm for x in vec] if norm > 0 else vec
 
-    # --- INTEGRALNOŚĆ DUSZY (HASH CHECK) ---
+    # --- HASH INTEGRITY ---
     
     def _compute_hash(self, data: dict) -> str:
-        """Oblicza SHA-256 dla słownika danych (sortuje klucze dla powtarzalności)"""
         json_str = json.dumps(data, sort_keys=True)
         return hashlib.sha256(json_str.encode()).hexdigest()
 
     def save(self):
-        """Zapisuje stan z hashem integralności"""
-        state = {
-            "energy": self.energy,
-            "vector": self.vector,
-            "ts": time.time()
-        }
-        
-        # Podpisz stan
+        state = {"energy": self.energy, "vector": self.vector, "ts": time.time()}
         integrity_hash = self._compute_hash(state)
-        
-        # Zapisz stan + podpis
         final_data = state.copy()
         final_data["integrity_hash"] = integrity_hash
-        
         with open(self.FILE_PATH, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
 
     def load(self):
-        """Wczytuje stan i WERYFIKUJE hash"""
         try:
             if not os.path.exists(self.FILE_PATH):
                 self.log("[INIT] Tworzenie nowej duszy...", "YELLOW")
                 return
-
             with open(self.FILE_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                
-                # 1. Wyciągnij zapisany hash
                 stored_hash = data.pop("integrity_hash", "")
-                
-                # 2. Oblicz hash dla reszty danych
                 computed_hash = self._compute_hash(data)
                 
-                # 3. Porównaj
                 if stored_hash == computed_hash:
                     self.energy = data.get("energy", 200.0)
                     if "vector" in data: self.vector = data["vector"]
-                    self.log("[INTEGRALNOŚĆ] ✓ ZGODNA (Dane autoryzowane)", "GREEN")
+                    self.log("[INTEGRALNOŚĆ] ✓ ZGODNA", "GREEN")
                 else:
-                    self.log("\n[INTEGRALNOŚĆ] ⚠️ BŁĄD KRYTYCZNY!", "RED")
-                    self.log("Wykryto manipulację plikiem duszy lub uszkodzenie danych.", "RED")
-                    self.log(">>> PRZYWRACANIE USTAWIEŃ FABRYCZNYCH <<<", "YELLOW")
-                    self.energy = 200.0 # Reset
-                    # Nie wczytujemy wektora z uszkodzonego pliku
-
+                    self.log("\n[INTEGRALNOŚĆ] ⚠️ BŁĄD! PRZYWRACANIE FABRYCZNE", "RED")
+                    self.energy = 200.0
         except Exception as e:
             self.log(f"[ERROR] Błąd odczytu duszy: {e}", "RED")
 
-    # --- LOGIKA SNU I ADRENALINY ---
+    # --- BIO SYSTEM ---
     
     def check_auto_sleep(self):
         is_under_attack = False
         recent_threats = list(self.evil_detector.threat_history)[-5:]
-        
         for threat in recent_threats:
             t_ts = datetime.fromisoformat(threat['timestamp']).timestamp()
             if (time.time() - t_ts) < 300: 
                 if threat['level'] != 'SAFE':
-                    is_under_attack = True
-                    break
+                    is_under_attack = True; break
         
         if is_under_attack:
             if self.energy < 20:
                 self.energy += 40
-                self.log("\n[ADRENALINA] 💉 Wstrzyknięto stymulant bojowy (+40 Energii)", "RED")
+                self.log("\n[ADRENALINA] 💉 Wstrzyknięto stymulant (+40 Energii)", "RED")
             return 
 
         now = time.time()
         time_since_sleep = now - self.last_sleep_time
         should_sleep = False
-        reason = ""
         
-        if time_since_sleep > self.AUTO_SLEEP_INTERVAL:
-            should_sleep = True; reason = "Cykl dobowy"
-        elif self.energy < self.LOW_ENERGY_THRESHOLD:
-            should_sleep = True; reason = f"Wyczerpanie ({self.energy:.0f})"
+        if time_since_sleep > self.AUTO_SLEEP_INTERVAL: should_sleep = True
+        elif self.energy < self.LOW_ENERGY_THRESHOLD: should_sleep = True
             
         if should_sleep:
-            self.log(f"\n[AUTO-SEN] Teren czysty. Inicjacja: {reason}", "PINK")
+            self.log(f"\n[AUTO-SEN] Inicjacja cyklu regeneracji...", "PINK")
             self.sleep_cycle()
 
     def sleep_cycle(self):
         self.log("[SEN] 💤 Konsolidacja pamięci...", "PINK")
         time.sleep(1.0)
         
-        reinforced = 0
-        compressed = 0
+        reinforced = 0; compressed = 0
         
+        # Wzmocnienie
         for entry in self.H_Log[-20:]:
             words = set(entry['content'].lower().split())
             for d in self.MapaD.values():
                 for tag in d['tags']:
-                    if tag in words:
-                        d['weight'] = min(100.0, d['weight'] + 0.5)
-                        reinforced += 1
+                    if tag in words: d['weight'] = min(100.0, d['weight'] + 0.5); reinforced += 1
         
+        # Kompresja
         new_h_log = []
         for entry in self.H_Log:
             redundant = False
             if entry.get('type') == 'chat':
                 for d in self.MapaD.values():
                     sim = VectorMath.cosine_similarity(entry['vector'], d['vector'])
-                    if sim > 0.95:
-                        redundant = True
-                        compressed += 1
-                        break
-            if not redundant:
-                new_h_log.append(entry)
+                    if sim > 0.95: redundant = True; compressed += 1; break
+            if not redundant: new_h_log.append(entry)
         
         self.H_Log = new_h_log
         self.energy = min(200.0, self.energy + 100)
         self.last_sleep_time = time.time()
-        
-        self.save_memory()
-        self.save() # Tu też nastąpi obliczenie hasha
+        self.save_memory(); self.save()
         self.log(f"[SEN] Wybudzono. Wzmocniono: {reinforced}, Usunięto: {compressed}", "GREEN")
 
     # --- GŁÓWNA PĘTLA ---
@@ -360,95 +325,77 @@ class EriAmoCore:
         threat = self.evil_detector.analyze(text)
         if threat.value >= ThreatLevel.DANGEROUS.value:
             self.log(f"[BLOKADA] Wykryto: {threat.name}", "RED")
-            self.energy -= 5
-            self.check_auto_sleep() 
-            return
+            self.energy -= 5; self.check_auto_sleep(); return
 
         if text.startswith("!") or text.startswith("/"):
-            self.handle_command(text)
-            self.check_auto_sleep()
-            return
+            self.handle_command(text); self.check_auto_sleep(); return
 
         vec = self._text_to_vector(text)
-        
-        memory_hit = None
-        best_sim = 0.0
+        memory_hit = None; best_sim = 0.0
         for d in self.MapaD.values():
             sim = VectorMath.cosine_similarity(vec, d['vector'])
-            if sim > best_sim and sim > 0.5:
-                best_sim = sim
-                memory_hit = d['content']
+            if sim > best_sim and sim > 0.5: best_sim = sim; memory_hit = d['content']
         
-        self.H_Log.append({
-            'vector': vec, 'content': text, 'type': 'chat', 'timestamp': time.time()
-        })
-        
+        self.H_Log.append({'vector': vec, 'content': text, 'type': 'chat', 'timestamp': time.time()})
         self.energy -= 2.0
         
-        response = ""
-        if memory_hit:
-            self.log(f"[PAMIĘĆ] (Sim: {best_sim:.2f})", "YELLOW")
-            response = f"Kojarzę to: {memory_hit}"
-        else:
-            response = self._generate_simple_response(text)
-            
+        response = f"Kojarzę to: {memory_hit}" if memory_hit else self._generate_simple_response(text)
         print(f"\n[Guardian] {response}")
         self.check_auto_sleep()
 
     def _generate_simple_response(self, text: str) -> str:
         if "status" in text.lower(): return f"Energia: {self.energy:.0f}"
-        return f"Przyjąłem: '{text}'. (Przetworzono wektorowo)"
+        return f"Przyjąłem: '{text}'. (Brak danych w pamięci)"
 
     def handle_command(self, cmd: str):
         parts = cmd.split()
         c = parts[0].lower().replace("/","!")
         
-        if c == "!teach" and len(parts) >= 3:
-            tag = parts[1]
-            content = " ".join(parts[2:])
-            self.teach(tag, content)
+        if c == "!help":
+            print("\n--- POMOC ---")
+            print(" !teach [tag] [treść]     -> Naucz nowej definicji")
+            print(" !teachevil [...]         -> Naucz zagrożenia (wzorzec LEVEL kat opis)")
+            print(" !sleep                   -> Wymuś sen (zapisz stan)")
+            print(" !status                  -> Pokaż energię i pamięć")
+            print(" !attack                  -> Symulacja ataku (test adrenaliny)")
+            print(" !exit                    -> Wyjście")
             
-        elif c == "!teachevil":
-            if len(parts) >= 4:
-                res = self.evil_detector.teach_evil(parts[1], parts[2], parts[3], " ".join(parts[4:]))
-                self.log(f"[SEC] {res}", "RED")
-            else:
-                print("Użycie: !teachevil [wzorzec] [LEVEL] [kat] [opis]")
-
+        elif c == "!teach" and len(parts) >= 3:
+            self.teach(parts[1], " ".join(parts[2:]))
+            
+        elif c == "!teachevil" and len(parts) >= 4:
+            res = self.evil_detector.teach_evil(parts[1], parts[2], parts[3], " ".join(parts[4:]))
+            self.log(f"[SEC] {res}", "RED")
+            
         elif c == "!sleep":
-            self.log("[CMD] Wymuszam sen...", "YELLOW")
-            self.sleep_cycle()
+            self.log("[CMD] Wymuszam sen...", "YELLOW"); self.sleep_cycle()
             
         elif c == "!attack":
             self.log("[TEST] Symulacja ataku!", "RED")
             fake_sig = EvilSignature("test", ThreatLevel.DANGEROUS, "sim", "Manual")
             self.evil_detector.log_threat(ThreatLevel.DANGEROUS, fake_sig, "ATAK TESTOWY")
-            self.energy = 10
-            print("Energia = 10. Zagrożenie aktywne.")
+            self.energy = 10; print("Energia = 10. Zagrożenie aktywne.")
             
         elif c == "!status":
-            print(f"Energia: {self.energy}")
-            print(f"Pamięć (MapaD): {len(self.MapaD)}")
+            print(f"Energia: {self.energy}"); print(f"Pamięć: {len(self.MapaD)}")
             print(f"Sygnatury Zła: {len(self.evil_detector.signatures)}")
             
         elif c == "!exit":
             self.active = False
+        else:
+            print("Nieznana komenda. Wpisz !help")
 
     def teach(self, tag: str, content: str):
         vec = self._text_to_vector(content)
         id_def = f"Def_{len(self.MapaD)+1:03d}"
-        self.MapaD[id_def] = {
-            'vector': vec, 'weight': 5.0, 'tags': [tag], 'content': content, 'id': id_def
-        }
-        self.log(f"[NAUKA] Zapisano '{tag}'", "GREEN")
-        self.save_memory()
+        self.MapaD[id_def] = {'vector': vec, 'weight': 5.0, 'tags': [tag], 'content': content, 'id': id_def}
+        self.log(f"[NAUKA] Zapisano '{tag}'", "GREEN"); self.save_memory()
 
     def load_memory(self):
         try:
             with open(self.MEMORY_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                self.MapaD = data.get("MapaD", {})
-                self.H_Log = data.get("H_Log", [])
+                self.MapaD = data.get("MapaD", {}); self.H_Log = data.get("H_Log", [])
         except: pass
 
     def save_memory(self):
@@ -463,11 +410,7 @@ if __name__ == "__main__":
     bot = EriAmoCore()
     
     print("\n--- EriAmo Mobile Console ---")
-    print(" !teach [tag] [treść]     - Nauka wiedzy")
-    print(" !teachevil [...]         - Nauka zagrożeń")
-    print(" !sleep                   - Wymuś sen (save + hash)")
-    print(" !attack                  - Test Adrenaliny")
-    print(" !exit                    - Wyjście\n")
+    print("Wpisz '!help' aby zobaczyć komendy.\n")
     
     while bot.active:
         try:
