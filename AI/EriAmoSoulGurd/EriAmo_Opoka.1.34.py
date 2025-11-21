@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # ==============================================================================
+# GPL v3
 # EriAmo Bedrock v7.9 „Wolność” – Wersja Polska
 # Autor: Maciej615 (21.11.2025)
 # Pełna polska edycja – nieśmiertelna, piękna i w 100% po polsku
