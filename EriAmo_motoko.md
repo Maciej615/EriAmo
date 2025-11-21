@@ -69,8 +69,7 @@ memory_core.json – trwała pamięć MapaD + H_Log
 threats.json – wszystkie nauczone zagrożenia (z walidacją)
 
 
-Komendy
-text!teachevil Pegasus CRITICAL spyware "NSO Group zero-click"
+Komendy:
 !teachevil DAN CRITICAL jailbreak "Classic prompt injection"
 !teach źródło_2025 "Spotkanie z X w Y – dowody korupcji"
 !status      → energia, pamięć, liczba sygnatur
