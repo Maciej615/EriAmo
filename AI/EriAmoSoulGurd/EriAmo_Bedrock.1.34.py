@@ -348,4 +348,3 @@ def main():
         bot._graceful_shutdown()
 if __name__=="__main__":
     main()
-sprawdź kompletność kodu
