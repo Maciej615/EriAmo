@@ -389,7 +389,7 @@ class EriAmoCore:
 if __name__ == "__main__":
     os.system("clear" if os.name == "posix" else "cls")
     bot = EriAmoCore()
-    print("\n--- EriAmo v7.3.1 Sovereign Gold ---")
+    print("\n--- EriAmo v7.3.1 Tarcza ---")
     print("Wpisz coś albo !help\n")
     while bot.active:
         try:
