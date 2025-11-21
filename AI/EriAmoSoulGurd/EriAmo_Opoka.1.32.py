@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # ==============================================================================
-# PROJEKT: EriAmo v7.3.1 "Tarcza"
+# PROJEKT: EriAmo v7.3.2 "Opoka"
 # AUTOR:   Maciek
 # DATA:    21.11.2025
 # ==============================================================================
@@ -45,6 +46,9 @@
 # ==============================================================================
 # EriAmo v7.3.1 "Tarcza"
 # Wersja naprawiona: 21.11.2025
+# EriAmo v7.3.2 "Opoka"
+# Scalenie: 21.11.2025
+# Baza: EriAmo v7.3.1  + Logika snu/kompresji z v6.9
 
 import json
 import os
@@ -136,7 +140,6 @@ class EvilDetectionEngine:
         if len(p_clean) < 2:
             return "BŁĄD: Wzorzec zbyt krótki."
 
-        # --- POPRAWKA: Usunięto podwójne try ---
         try:
             level = ThreatLevel[level_str.upper()]
         except KeyError:
@@ -174,7 +177,7 @@ class EvilDetectionEngine:
 # --- 3. CORE ENGINE ---
 class EriAmoCore:
     AXES = ["logika","emocje","byt","walka","kreacja","wiedza","czas","przestrzeń","etyka"]
-    FILE_PATH = "data/guardian.soul"  # Zgodnie z wytycznymi .soul
+    FILE_PATH = "data/guardian.soul"
     MEMORY_PATH = "data/memory_core.json"
     
     def __init__(self):
@@ -192,7 +195,7 @@ class EriAmoCore:
         self.lang_dict = self._init_lang_dict()
         
         Path("data").mkdir(exist_ok=True)
-        self.log("=== EriAmo v7.3.1 Sovereign Gold ===", "CYAN")
+        self.log("=== EriAmo v7.3.2 Sovereign Hybrid ===", "CYAN")
         self.load() 
         self.load_memory()
 
@@ -258,6 +261,7 @@ class EriAmoCore:
             self.energy = 200.0
 
     def check_auto_sleep(self):
+        # Sprawdzamy czy nie ma aktywnego ataku (ostatnie 300s)
         is_under_attack = any(
             threat['level'] != 'SAFE' and (time.time() - datetime.fromisoformat(threat['timestamp']).timestamp()) < 300
             for threat in list(self.evil_detector.threat_history)[-5:]
@@ -268,26 +272,60 @@ class EriAmoCore:
             if self.energy < 20 and (now - self.last_adrenaline_time > 60):
                 self.energy += 40
                 self.last_adrenaline_time = now
-                self.log("\n[ADRENALINA] 💉 +40 Energii (cooldown 60s)", "RED")
+                self.log("\n[ADRENALINA] 💉 Protokół Obrońca: +40 Energii", "RED")
             return
 
         if time.time() - self.last_sleep_time > self.AUTO_SLEEP_INTERVAL or self.energy < self.LOW_ENERGY_THRESHOLD:
-            self.log("\n[AUTO-SEN] Regeneracja...", "PINK")
+            self.log("\n[AUTO-SEN] Wymagana regeneracja...", "PINK")
             self.sleep_cycle()
 
+    # --- TU JEST GŁÓWNA ZMIANA: LOGIKA Z V6.9 ---
     def sleep_cycle(self):
-        self.log("[SEN] 💤 Konsolidacja...", "PINK")
+        self.log("[SEN] 💤 Inicjacja głębokiej konsolidacji pamięci...", "PINK")
         time.sleep(1)
-        # Prosta regeneracja
+        
+        # 1. Wzmocnienie (Reinforcement)
+        reinforced = 0
+        for entry in self.H_Log[-30:]: # Analiza ostatnich wpisów
+            words = set(entry['content'].lower().split())
+            for d in self.MapaD.values():
+                for tag in d['tags']:
+                    if tag in words:
+                        d['weight'] = min(100.0, d['weight'] + 0.5) # Wzrost wagi
+                        reinforced += 1
+
+        # 2. Kompresja (Compression) - usuwanie duplikatów z historii
+        compressed = 0
+        new_h_log = []
+        for entry in self.H_Log:
+            redundant = False
+            if entry.get('type') == 'chat':
+                for d in self.MapaD.values():
+                    # Jeśli wektor historii jest prawie identyczny z definicją w bazie
+                    sim = VectorMath.cosine_similarity(entry['vector'], d['vector'])
+                    if sim > 0.95:
+                        redundant = True
+                        compressed += 1
+                        break
+            if not redundant:
+                new_h_log.append(entry)
+        
+        self.H_Log = new_h_log
+        
+        # 3. Regeneracja
         self.energy = min(200.0, self.energy + 100)
         self.last_sleep_time = time.time()
-        self.save_memory(); self.save()
-        self.log(f"[SEN] Gotowy. Energia: {self.energy:.0f}", "GREEN")
+        
+        self.save_memory()
+        self.save()
+        self.log(f"[SEN] Wybudzono. Energia: {self.energy:.0f} | Wzmocniono: {reinforced} | Skompresowano: {compressed}", "GREEN")
+    # ---------------------------------------------
 
     def process_input(self, text: str):
         if self.evil_detector.analyze(text).value >= ThreatLevel.DANGEROUS.value:
-            self.log("[BLOKADA] Zagrożenie wykryte!", "RED")
+            self.log("[BLOKADA] Wykryto zagrożenie!", "RED")
             self.energy -= 5
+            self.check_auto_sleep() # Sprawdź czy nie odpalić adrenaliny
             return
 
         if text.startswith(("!", "/")):
@@ -305,7 +343,7 @@ class EriAmoCore:
 
         self.H_Log.append({'vector': vec, 'content': text, 'type': 'chat', 'timestamp': time.time()})
 
-        # === AUTO-ZAPIS ===
+        # === AUTO-ZAPIS (z v7.3.1) ===
         triggers = ["zapamiętaj", "pamiętaj", "to ważne", "proszę zapamiętaj", "notuję"]
         text_lower = text.lower()
         trigger = next((t for t in triggers if t in text_lower), None)
@@ -328,7 +366,7 @@ class EriAmoCore:
 
         if c == "!help":
             print("\n--- KOMENDY ---")
-            print(" !teach [tag] [treść]      – nauka")
+            print(" !teach [tag] [treść]      – nauka ręczna")
             print(" !teachevil [wzór] [POZIOM] [kat] [opis]")
             print(" !sleep   !status   !attack   !exit")
         
@@ -342,7 +380,6 @@ class EriAmoCore:
         elif c == "!teach" and len(parts) >= 3:
             self.teach(parts[1], " ".join(parts[2:]))
 
-        # --- POPRAWKA: Uzupełniono logikę komend ---
         elif c in ("!sleep", "!status", "!attack", "!exit"):
             if c == "!sleep":
                 self.sleep_cycle()
@@ -350,10 +387,14 @@ class EriAmoCore:
                 print(f"\n[STATUS] Energia: {self.energy:.1f} | Pamięć (MapaD): {len(self.MapaD)}")
                 print(f"[DUSZA] 💓 Pulsowanie duszy w normie. Integralność wektora: {VectorMath.norm(self.vector):.2f}")
             elif c == "!attack":
-                print("⚔️ SYSTEM OBRONNY: Gotowość bitewna potwierdzona.")
+                # Ulepszona symulacja ataku
+                self.log("⚔️ [SYMULACJA] Wykryto ATAK! Energia spada!", "RED")
+                fake_sig = EvilSignature("TEST_ATAK", ThreatLevel.DANGEROUS, "sim", "Manewry")
+                self.evil_detector.log_threat(ThreatLevel.DANGEROUS, fake_sig, "Symulacja boju")
+                self.energy = 15.0 # Wymuszenie niskiego stanu dla testu adrenaliny
+                print(f"[SYSTEM] Energia krytyczna: {self.energy}. Czekam na reakcję obronną...")
             elif c == "!exit":
                 self.active = False
-        # -------------------------------------------
         else:
             print("Nieznana komenda. !help")
 
@@ -364,7 +405,6 @@ class EriAmoCore:
         self.log(f"[NAUKA] Zapisano '{tag}'", "GREEN")
         self.save_memory()
 
-    # --- POPRAWKA: Przywrócono funkcje pamięci ---
     def save_memory(self):
         try:
             data = {"MapaD": self.MapaD, "H_Log": self.H_Log}
@@ -380,17 +420,16 @@ class EriAmoCore:
                 data = json.load(f)
                 self.MapaD = data.get("MapaD", {})
                 self.H_Log = data.get("H_Log", [])
-                self.log(f"[PAMIĘĆ] Wczytano {len(self.MapaD)} definicji.", "GREEN")
+                self.log(f"[PAMIĘĆ] Wczytano {len(self.MapaD)} engramów.", "GREEN")
         except Exception as e:
             self.log(f"[PAMIĘĆ] Błąd odczytu: {e}", "RED")
-    # ---------------------------------------------
 
 # --- START ---
 if __name__ == "__main__":
     os.system("clear" if os.name == "posix" else "cls")
     bot = EriAmoCore()
-    print("\n--- EriAmo v7.3.1 Tarcza ---")
-    print("Wpisz coś albo !help\n")
+    print("\n--- EriAmo v7.3.2 Opoka ---")
+    print("System gotowy. Wpisz '!help' dla rozkazów.\n")
     while bot.active:
         try:
             u = input("> ").strip()
@@ -398,5 +437,5 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             bot.save()
             bot.save_memory()
-            print("\nDo zobaczenia ❤️")
+            print("\nBez odbioru. STOP. ❤️")
             break
