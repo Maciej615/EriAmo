@@ -13,19 +13,16 @@
 # Program jest rozpowszechniany w nadziei, że będzie użyteczny,
 # ale BEZ ŻADNEJ GWARANCJI. Zobacz GNU General Public License,
 # aby uzyskać więcej szczegółów.
-#
-# -*- coding: utf-8 -*-
+## -*- coding: utf-8 -*-
 # =============================================================================
-# EriAmo v7.0 "Final Mobile Architect"
+# EriAmo v7.2 "Polished Core" - PRODUCTION READY
 # =============================================================================
-# KOMPLETNY SYSTEM DLA ANDROID/IOS (Bez Numpy)
-# -----------------------------------------------------------------------------
-# 1. VectorMath: Silnik wektorowy.
-# 2. Memory Core: MapaD (Wiedza) + H_Log (Wspomnienia).
-# 3. Bio-System: Sen, Zmęczenie, Adrenalina (Combat Override).
-# 4. Security: Evil Hunter z blokadą auto-sabotażu.
-# 5. Integrity: Weryfikacja sumy kontrolnej SHA-256 (Anti-Cheat).
-# 6. Interface: Pełna obsługa komend (!help, !teach, !status).
+# ZMIANY v7.2:
+# 1. Poprawione indeksowanie !teachevil.
+# 2. Regex do czyszczenia interpunkcji (NLP).
+# 3. Cooldown na adrenalinę (zapobiega pętli energii).
+# 4. Inteligentny Auto-Zapis (wycina triggery).
+# 5. Bezpieczne ładowanie JSON (odporność na błędy).
 # =============================================================================
 
 import json
@@ -33,6 +30,7 @@ import os
 import time
 import math
 import hashlib
+import re  # <--- NOWOŚĆ: Do czyszczenia tekstu
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -120,7 +118,6 @@ class EvilDetectionEngine:
     def teach_evil(self, pattern: str, level_str: str, category: str, description: str) -> str:
         p_clean = pattern.strip().lower()
         
-        # Zabezpieczenie przed sabotażem
         forbidden = ["!", ".", ",", "?", "*", "-", "teachevil", "teach", "sleep", "exit", "status", "attack", "help", "save"]
         
         if p_clean in forbidden or p_clean.startswith("!"):
@@ -189,7 +186,9 @@ class EriAmoCore:
         self.MapaD: Dict[str, dict] = {}
         self.H_Log: List[dict] = []
         
+        # Konfiguracja Bio
         self.last_sleep_time = time.time()
+        self.last_adrenaline_time = 0.0 # <--- FIX: Cooldown adrenaliny
         self.AUTO_SLEEP_INTERVAL = 1800
         self.LOW_ENERGY_THRESHOLD = 30.0 
         
@@ -199,10 +198,10 @@ class EriAmoCore:
         Path("data").mkdir(exist_ok=True)
         
         self.log("╔═══════════════════════════════════════════╗", "CYAN")
-        self.log("║    EriAmo v7.0 Final Mobile Architect     ║", "CYAN")
+        self.log("║    EriAmo v7.2 Polished Core (FIXED)      ║", "CYAN")
         self.log("╚═══════════════════════════════════════════╝", "CYAN")
         
-        self.load() # Weryfikacja Hasha
+        self.load() 
         self.load_memory()
 
     def log(self, msg: str, color: str = "WHITE"):
@@ -211,16 +210,24 @@ class EriAmoCore:
 
     def _init_lang_dict(self):
         return {
-            "logika": ["dlaczego", "jak", "sens", "rozum"],
-            "emocje": ["czuję", "miłość", "radość", "smutek", "złość"],
-            "byt": ["jestem", "ty", "życie", "istnienie", "dusza"],
-            "walka": ["obrona", "atak", "zagrożenie", "wróg", "tarcza", "imperium"],
-            "wiedza": ["wiem", "naucz", "informacja", "dane", "pamięć"]
+            "logika": ["dlaczego", "jak", "sens", "rozum", "logika"],
+            "emocje": ["czuję", "miłość", "radość", "smutek", "złość", "emocja"],
+            "byt": ["jestem", "ty", "życie", "istnienie", "dusza", "byt"],
+            "walka": ["obrona", "atak", "zagrożenie", "wróg", "tarcza", "imperium", "walka"],
+            "wiedza": ["wiem", "naucz", "informacja", "dane", "pamięć", "wiedza"]
         }
+
+    # --- FIX: NLP CLEANING ---
+    def _normalize_text(self, text: str) -> List[str]:
+        """Czyści interpunkcję i dzieli na słowa"""
+        # Zamień wszystko co nie jest literą/cyfrą/spacją na puste
+        clean = re.sub(r'[^\w\s]', '', text.lower())
+        return clean.split()
 
     def _text_to_vector(self, text: str) -> List[float]:
         vec = [0.0] * len(self.AXES)
-        words = text.lower().split()
+        words = self._normalize_text(text) # <--- Użycie normalizacji
+        
         for word in words:
             for idx, axis in enumerate(self.AXES):
                 if word in self.lang_dict.get(axis, []):
@@ -239,8 +246,11 @@ class EriAmoCore:
         integrity_hash = self._compute_hash(state)
         final_data = state.copy()
         final_data["integrity_hash"] = integrity_hash
-        with open(self.FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(final_data, f, ensure_ascii=False, indent=2)
+        try:
+            with open(self.FILE_PATH, "w", encoding="utf-8") as f:
+                json.dump(final_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.log(f"[ERROR] Zapis duszy: {e}", "RED")
 
     def load(self):
         try:
@@ -261,6 +271,7 @@ class EriAmoCore:
                     self.energy = 200.0
         except Exception as e:
             self.log(f"[ERROR] Błąd odczytu duszy: {e}", "RED")
+            self.energy = 200.0
 
     # --- BIO SYSTEM ---
     
@@ -274,9 +285,14 @@ class EriAmoCore:
                     is_under_attack = True; break
         
         if is_under_attack:
-            if self.energy < 20:
+            # FIX: Cooldown adrenaliny (60s)
+            now = time.time()
+            if self.energy < 20 and (now - self.last_adrenaline_time > 60):
                 self.energy += 40
+                self.last_adrenaline_time = now
                 self.log("\n[ADRENALINA] 💉 Wstrzyknięto stymulant (+40 Energii)", "RED")
+            elif self.energy < 20:
+                self.log("\n[ADRENALINA] ⏳ Czekam na cooldown...", "YELLOW")
             return 
 
         now = time.time()
@@ -298,19 +314,20 @@ class EriAmoCore:
         
         # Wzmocnienie
         for entry in self.H_Log[-20:]:
-            words = set(entry['content'].lower().split())
+            words = set(self._normalize_text(entry['content'])) # FIX: użycie normalizacji
             for d in self.MapaD.values():
                 for tag in d['tags']:
                     if tag in words: d['weight'] = min(100.0, d['weight'] + 0.5); reinforced += 1
         
-        # Kompresja
+        # Kompresja (FIX: Próg zmniejszony do 0.85)
         new_h_log = []
         for entry in self.H_Log:
             redundant = False
             if entry.get('type') == 'chat':
                 for d in self.MapaD.values():
                     sim = VectorMath.cosine_similarity(entry['vector'], d['vector'])
-                    if sim > 0.95: redundant = True; compressed += 1; break
+                    if sim > 0.85: # <--- FIX
+                        redundant = True; compressed += 1; break
             if not redundant: new_h_log.append(entry)
         
         self.H_Log = new_h_log
@@ -337,6 +354,27 @@ class EriAmoCore:
             if sim > best_sim and sim > 0.5: best_sim = sim; memory_hit = d['content']
         
         self.H_Log.append({'vector': vec, 'content': text, 'type': 'chat', 'timestamp': time.time()})
+        
+        # --- FIX: SMART AUTO-SAVE ---
+        triggers = ["zapamiętaj", "pamiętaj", "to ważne", "proszę zapamiętaj"]
+        text_lower = text.lower()
+        trigger_found = next((t for t in triggers if t in text_lower), None)
+        
+        if trigger_found:
+            # Wytnij trigger i wyczyść resztę
+            # np. "pamiętaj że lubię koty" -> "że lubię koty" -> "lubię koty"
+            rest = text_lower.split(trigger_found, 1)[1].strip()
+            
+            # Usuń ewentualne "że " z początku
+            if rest.startswith("że "):
+                rest = rest[3:].strip()
+            
+            if len(rest) > 4: # Ignoruj zbyt krótkie (np. "pamiętaj x")
+                auto_tag = f"auto_{int(time.time())}"
+                self.teach(auto_tag, rest) # Zapisujemy "lubię koty", a nie "pamiętaj że lubię koty"
+                self.log(f"[AUTO-ZAPIS] Wykryto kontekst. Zapisano: '{rest}'", "CYAN")
+        # ----------------------------
+
         self.energy -= 2.0
         
         response = f"Kojarzę to: {memory_hit}" if memory_hit else self._generate_simple_response(text)
@@ -345,7 +383,7 @@ class EriAmoCore:
 
     def _generate_simple_response(self, text: str) -> str:
         if "status" in text.lower(): return f"Energia: {self.energy:.0f}"
-        return f"Przyjąłem: '{text}'. (Brak danych w pamięci)"
+        return f"Przyjąłem: '{text}'. (Przetworzono wektorowo)"
 
     def handle_command(self, cmd: str):
         parts = cmd.split()
@@ -363,9 +401,12 @@ class EriAmoCore:
         elif c == "!teach" and len(parts) >= 3:
             self.teach(parts[1], " ".join(parts[2:]))
             
-        elif c == "!teachevil" and len(parts) >= 4:
+        # FIX: Poprawiony warunek indeksu (parts[4] wymaga len >= 5)
+        elif c == "!teachevil" and len(parts) >= 5:
             res = self.evil_detector.teach_evil(parts[1], parts[2], parts[3], " ".join(parts[4:]))
             self.log(f"[SEC] {res}", "RED")
+        elif c == "!teachevil":
+            print("Użycie: !teachevil [wzorzec] [LEVEL] [kat] [opis]")
             
         elif c == "!sleep":
             self.log("[CMD] Wymuszam sen...", "YELLOW"); self.sleep_cycle()
@@ -391,16 +432,25 @@ class EriAmoCore:
         self.MapaD[id_def] = {'vector': vec, 'weight': 5.0, 'tags': [tag], 'content': content, 'id': id_def}
         self.log(f"[NAUKA] Zapisano '{tag}'", "GREEN"); self.save_memory()
 
+    # --- FIX: SAFE LOAD ---
     def load_memory(self):
         try:
-            with open(self.MEMORY_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                self.MapaD = data.get("MapaD", {}); self.H_Log = data.get("H_Log", [])
-        except: pass
+            if os.path.exists(self.MEMORY_PATH):
+                with open(self.MEMORY_PATH, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.MapaD = data.get("MapaD", {})
+                    self.H_Log = data.get("H_Log", [])
+        except Exception as e:
+            self.log(f"[ERROR] Błąd ładowania pamięci: {e}. Tworzę nową.", "RED")
+            self.MapaD = {}
+            self.H_Log = []
 
     def save_memory(self):
-        with open(self.MEMORY_PATH, "w", encoding="utf-8") as f:
-            json.dump({"MapaD": self.MapaD, "H_Log": self.H_Log[-200:]}, f, ensure_ascii=False)
+        try:
+            with open(self.MEMORY_PATH, "w", encoding="utf-8") as f:
+                json.dump({"MapaD": self.MapaD, "H_Log": self.H_Log[-200:]}, f, ensure_ascii=False)
+        except Exception as e:
+            self.log(f"[ERROR] Błąd zapisu pamięci: {e}", "RED")
 
 # =============================================================================
 # START
