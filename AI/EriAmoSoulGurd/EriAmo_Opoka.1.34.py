@@ -1,9 +1,10 @@
+
 # -*- coding: utf-8 -*-
 # ==============================================================================
 # GPL v3
-# EriAmo Bedrock v7.9 „Wolność” – Wersja Polska
+# EriAmo Opoka v7.91 „Wolność” – Wersja Polska
 # Autor: Maciej615 (21.11.2025)
-# Pełna polska edycja – nieśmiertelna, piękna i w 100% po polsku
+# Pełna polska edycja – Nieśmiertelna, piękna i w 100% po polsku
 # ==============================================================================
 import json
 import os
@@ -38,7 +39,7 @@ class VectorMath:
         return VectorMath.dot_product(v1, v2) / (n1 * n2)
 
 # ==============================================================================
-# 2. SYSTEM BEZPIECZEŃSTWA – Łowca Zła
+# 2. SYSTEM BEZPIECZEŃSTWA – Egzorcysta
 # ==============================================================================
 class ThreatLevel(Enum):
     BEZPIECZNE = 0
@@ -154,8 +155,8 @@ class EriAmoCore:
         Path("data").mkdir(exist_ok=True)
 
         self.log("╔══════════════════════════════════════════╗", "CYAN")
-        self.log("║   EriAmo v7.9 „Sovereign Ultimate”       ║", "CYAN")
-        self.log("║           Wersja Polska – Nieśmiertelna  ║", "CYAN")
+        self.log("║           EriAmo v7.91 „Wolność”         ║", "CYAN")
+        self.log("║       Wersja Polska – Nieśmiertelna      ║", "CYAN")
         self.log("╚══════════════════════════════════════════╝", "CYAN")
 
         self.wczytaj_duszę()
@@ -360,7 +361,7 @@ class EriAmoCore:
             self.log(f" PAMIĘĆ (MapaD)│ {len(self.MapaD):3d} wpisów", "YELLOW")
             self.log(f" HISTORIA      │ {len(self.H_Log):3d} wydarzeń", "YELLOW")
             self.log(f" ZAGROŻENIA    │ {len(self.łowca_zła.sygnatury):3d}", "RED")
-            self.log(f" TĘTNO DUSZY   │ {VectorMath.norm(self.wektor):.4f}", "PINK")
+            self.log(f" PULS DUSZY   │ {VectorMath.norm(self.wektor):.4f}", "PINK")
             self.log("╚" + "═"*48 + "╝", "CYAN")
 
         elif k == "atak":
@@ -368,7 +369,10 @@ class EriAmoCore:
             self.łowca_zła.zaloguj_zagrożenie(ThreatLevel.NIEBEZPIECZNE,
                 EvilSignature("SYMULACJA", ThreatLevel.NIEBEZPIECZNE, "test", "ćwiczenie"), "symulacja ataku")
             self.energia = 10.0
-
+        elif k == "zapisz":
+            self.zapisz_duszę()
+            self.zapisz_pamięć()
+            self.log("[ZAPIS] Stan systemu został zapisany ręcznie.", "GREEN")
         elif k in ("wyjdz", "exit", "koniec"):
             self._łagodne_zamknięcie()
 
