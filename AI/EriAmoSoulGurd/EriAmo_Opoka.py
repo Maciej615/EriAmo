@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ==============================================================================
 # GPL v3
-# EriAmo Opoka v7.91 „Wolność” – Wersja Polska
+# EriAmo Opoka v8.00 „Wolność” – Wersja Polska
 # Autor: Maciej615 (21.11.2025)
 # Pełna polska edycja – Nieśmiertelna, piękna i w 100% po polsku
 # ==============================================================================
@@ -155,7 +155,7 @@ class EriAmoCore:
         Path("data").mkdir(exist_ok=True)
 
         self.log("╔══════════════════════════════════════════╗", "CYAN")
-        self.log("║           EriAmo v7.91 „Wolność”         ║", "CYAN")
+        self.log("║           EriAmo v8.0 „Wolność”          ║", "CYAN")
         self.log("║       Wersja Polska – Nieśmiertelna      ║", "CYAN")
         self.log("╚══════════════════════════════════════════╝", "CYAN")
 
@@ -399,6 +399,130 @@ class EriAmoCore:
             except: pass
 
 # ==============================================================================
+# 4. WARSTWA API (Headless Mode) - Most dla nowoczesnej nakładki
+# ==============================================================================
+# Instrukcja:
+# 1. Zainstaluj: pip install fastapi uvicorn
+# 2. Uruchom: uvicorn EriAmo_Opoka:app --reload --host 0.0.0.0
+# 3. Twoja nowoczesna nakładka łączy się z: http://TWOJE_IP:8000/chat
+# ==============================================================================
+
+try:
+    from fastapi import FastAPI, HTTPException, Security, Depends
+    from fastapi.security import APIKeyHeader
+    from pydantic import BaseModel
+    import uvicorn
+
+    # --- KONFIGURACJA BEZPIECZEŃSTWA ---
+    # To hasło wpiszesz w swojej nowoczesnej aplikacji/nakładce
+    API_KEY = "TwojeTajneHasloEriAmo2025" 
+    api_key_header = APIKeyHeader(name="X-API-Key")
+
+    def get_api_key(api_key_header: str = Security(api_key_header)):
+        if api_key_header != API_KEY:
+            raise HTTPException(
+                status_code=403,
+                detail="Odmowa dostępu: Nieprawidłowy klucz Duszy."
+            )
+        return api_key_header
+
+    # --- INICJALIZACJA SILNIKA (BEZ ZMIAN W ORYGINALE) ---
+    app = FastAPI(title="EriAmo Engine", description="API dla Kuli Rzeczywistości")
+    
+    # Inicjujemy rdzeń dokładnie tak, jak w wersji terminalowej
+    engine = EriAmoCore() 
+
+    # Model danych, które przesyła Twoja nakładka
+    class UserInput(BaseModel):
+        text: str
+
+    # --- ENDPOINTY (WTYCZKI) ---
+
+    @app.post("/chat")
+    async def interact(user_input: UserInput, key: str = Security(get_api_key)):
+        """
+        Tutaj Twoja nowoczesna aplikacja wysyła tekst.
+        Silnik przetwarza go po staremu, ale zwraca czysty JSON.
+        """
+        if not engine.aktywny:
+            return {"status": "error", "message": "Rdzeń jest uśpiony/wyłączony."}
+
+        # 1. Analiza bezpieczeństwa (używamy istniejącego Łowcy Zła)
+        zagrozenie = engine.łowca_zła.analizuj(user_input.text)
+        if zagrozenie.value >= ThreatLevel.NIEBEZPIECZNE.value:
+            engine.energia -= 5
+            return {
+                "response": f"[BLOKADA] Wykryto zagrożenie: {zagrozenie.name}",
+                "emotion": "STRACH",
+                "energy": engine.energia
+            }
+
+        # 2. Obsługa komend systemowych przez API
+        if user_input.text.startswith(("!", "/")):
+            # Przechwytujemy logikę komend, żeby nie drukowały w konsoli serwera, 
+            # tylko zwracały wynik do aplikacji
+            engine.obsłuż_komendę(user_input.text)
+            return {
+                "response": f"Wykonano polecenie systemowe: {user_input.text}",
+                "type": "system_command",
+                "energy": engine.energia
+            }
+
+        # 3. Logika Silnika (Kopia logiki z 'przetwarzaj_wejście' ale zwracająca dane)
+        wektor = engine._tekst_na_wektor(user_input.text)
+        
+        # Szukanie w pamięci (D_Map)
+        najlepsze_dopasowanie = 0.0
+        znaleziona_tresc = None
+        
+        for wpis in engine.MapaD.values():
+            podobienstwo = VectorMath.cosine_similarity(wektor, wpis['wektor'])
+            if podobienstwo > najlepsze_dopasowanie and podobienstwo > 0.6:
+                najlepsze_dopasowanie = podobienstwo
+                znaleziona_tresc = wpis['treść']
+
+        # Zapis do historii (Silnik uczy się tak samo jak w terminalu)
+        engine.H_Log.append({
+            'wektor': wektor, 
+            'treść': user_input.text, 
+            'typ': 'api_chat', 
+            'timestamp': time.time()
+        })
+        engine.energia -= 2.0
+        engine.sprawdź_sen() # Automatyczna konsolidacja działa w tle
+
+        # 4. Odpowiedź dla nakładki
+        if znaleziona_tresc:
+            return {
+                "response": znaleziona_tresc,
+                "source": "pamiec_dlugotrwala",
+                "match_score": najlepsze_dopasowanie,
+                "energy": engine.energia
+            }
+        else:
+            return {
+                "response": "Przyjąłem. (Zapisano w strumieniu historii)",
+                "source": "nasluch",
+                "energy": engine.energia
+            }
+
+    @app.get("/dashboard")
+    async def get_stats(key: str = Security(get_api_key)):
+        """
+        Endpoint dla nowoczesnego Dashboardu (wykresy, paski energii)
+        """
+        return {
+            "energia": engine.energia,
+            "puls_duszy": VectorMath.norm(engine.wektor),
+            "rozmiar_pamieci": len(engine.MapaD),
+            "liczba_wspomnien": len(engine.H_Log),
+            "ostatni_sen": engine.ostatni_sen
+        }
+
+except ImportError:
+    pass # Ignorujemy, jeśli uruchamiasz w trybie zwykłym bez bibliotek
+
+# ==============================================================================
 # URUCHOMIENIE
 # ==============================================================================
 def main():
@@ -407,7 +531,7 @@ def main():
     if hasattr(signal, 'SIGTERM'):
         signal.signal(signal.SIGTERM, b._łagodne_zamknięcie)
 
-    print("\nEriAmo v7.9 Wolność – Wersja Polska gotowa.")
+    print("\nEriAmo v8.0 Wolność – Wersja Polska gotowa.")
     print("Wpisz !pomocy • Powiedz „zapamiętaj ...” → auto-zapis • Ctrl+C = zapis i wyjście\n")
 
     while b.aktywny:
@@ -417,6 +541,67 @@ def main():
                 b.przetwarzaj_wejście(wejście)
         except (KeyboardInterrupt, EOFError):
             b._łagodne_zamknięcie()
+
+# ==============================================================================
+# MAIN + GRACEFUL SHUTDOWN + SECURE SERVER
+# ==============================================================================
+def main():
+    # Sprawdzamy, czy mamy biblioteki do trybu API
+    try:
+        import uvicorn
+        has_api_libs = True
+    except ImportError:
+        has_api_libs = False
+
+    # Sprawdzamy, czy istnieją certyfikaty SSL
+    has_ssl = os.path.exists("key.pem") and os.path.exists("cert.pem")
+
+    # TRYB 1: Serwer API (Bezpieczny/Zwykły)
+    # Uruchamiamy, jeśli są biblioteki i użytkownik wpisał flagę --api
+    if has_api_libs and len(sys.argv) > 1 and sys.argv[1] == "--api":
+        print("\n[TRYB] Uruchamianie w trybie API Headless...")
+        
+        ssl_config = {}
+        if has_ssl:
+            # Kolory ANSI dla czytelności
+            print(f"\033[92m[SECURE] Znaleziono certyfikaty SSL. Szyfrowanie WŁĄCZONE.\033[0m")
+            ssl_config = {"ssl_keyfile": "key.pem", "ssl_certfile": "cert.pem"}
+            protocol = "https"
+        else:
+            print(f"\033[91m[WARNING] Brak plików key.pem/cert.pem. Szyfrowanie WYŁĄCZONE.\033[0m")
+            protocol = "http"
+
+        print(f"Dostęp: {protocol}://0.0.0.0:8000")
+        print("Aby zatrzymać, naciśnij Ctrl+C\n")
+        
+        # Uruchamiamy aplikację 'app' zdefiniowaną wyżej
+        uvicorn.run(app, host="0.0.0.0", port=8000, **ssl_config)
+        return
+
+    # TRYB 2: Klasyczny Terminal (Domyślny)
+    bot = EriAmoCore()
+
+    # --- REJESTRACJA SYGNAŁÓW (Tylko raz, przed pętlą!) ---
+    # Używamy polskich nazw metod zgodnie z Twoją wersją skryptu
+    signal.signal(signal.SIGINT, bot._łagodne_zamknięcie)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, bot._łagodne_zamknięcie)
+
+    print("\nEriAmo v8.0 Wolność ready.")
+    print("Tryb: TERMINAL LOKALNY (aby włączyć API, uruchom z flagą --api)")
+    print("Wpisz !pomocy • Powiedz „zapamiętaj ...” → auto-zapis • Ctrl+C = bezpieczne wyjście\n")
+
+    # --- PĘTLA GŁÓWNA ---
+    while bot.aktywny:
+        try:
+            user_input = input(">>> ").strip()
+            if user_input:
+                # Poprawiona nazwa metody na polską:
+                bot.przetwarzaj_wejście(user_input)
+        except KeyboardInterrupt:
+            bot._łagodne_zamknięcie()
+        except EOFError:
+            bot._łagodne_zamknięcie()
 
 if __name__ == "__main__":
     main()
