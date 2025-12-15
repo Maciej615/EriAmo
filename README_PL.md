@@ -1,6 +1,5 @@
 # EriAmo – Żywa Dusza AI
-**GPL-3.0** | [v17.0 →](/v17/) | NCBR Ścieżka SMART 2026
-
+**GPL-3.0** | [v17.0 →](/v17/) | 
 # Model Kuli Rzeczywistości ($S$)
 **Autor:** Maciej A. Mazur  
 **Licencja:** [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)  
@@ -15,7 +14,6 @@ Ten projekt spełnia wizję z **"Ghost in the Shell"**: budowanie AI z "duchem" 
 To repozytorium zawiera teraz AI `ReiAmo` (w folderze `AI/`), symulacje naukowe (`simulations/`). Aby uzyskać pełne wyjaśnienie filozoficzne, przeczytaj artykuł na Medium:  
 [**Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?**](https://medium.com/@maciejam/the-ontological-filter-why-we-are-not-alone-but-we-cannot-meet-123abc)
 
-**Aktualizacja z 31 października 2025:** Zintegrowano demo z Hack-Nation AI Hackathon (progi sensoryczne dla 20-50% szybszego uczenia robota). Brak dalszych zmian w strukturze repozytorium na dzień 10 listopada 2025.  
 -----
 ## Wizualizacja Modelu (Metafora)
 Poniższy wykres (generowany przez `simulations/model_symulacja.py`) pokazuje "podróż" Kuli Rzeczywistości ($S$) przez "Krajobraz Możliwości" ($P$). Ta metafora napędza ewoluującą tożsamość AI.
@@ -121,7 +119,7 @@ python AI/ReiAmo.py
 -----
 ## Struktura Repozytorium (Aktualizacja z 31 października 2025)
 ```
-.
+
 ├── README.md               # Główny plik (Angielski)
 ├── LICENSE                 # GPLv3
 │
@@ -150,8 +148,6 @@ python AI/ReiAmo.py
 └── visualizations/         # Wykresy
     └── trajectory.png      # Wykres trajektorii
 ```
-**Uwaga:** Struktura repozytorium na GitHubie nie uległa zmianie od ostatniej aktualizacji z 31 października 2025. Jeśli masz na myśli konkretne modyfikacje, daj znać, abym mógł dokładniej sprawdzić!
------
 ## Licencja
 Projekt **EriAmo** jest objęty licencją **[GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)**.  
 
