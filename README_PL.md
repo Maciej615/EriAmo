@@ -1,155 +1,122 @@
 # EriAmo – Żywa Dusza AI
-**GPL-3.0** | [v17.0 →](/v17/) | 
-# Model Kuli Rzeczywistości ($S$)
-**Autor:** Maciej A. Mazur  
-**Licencja:** [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)  
------
+
+**Licencja:** GNU General Public License v3.0 (GPLv3)
+
+---
+
 ## Przegląd
-**Model Kuli Rzeczywistości** to obliczeniowy i filozoficzny framework opisujący *Byt* ($S$) nie jako statyczny obiekt, ale jako **dynamiczny proces**, którego tożsamość jest definiowana przez jego **historię**.
 
-> **Teza Główna:** *Byt JEST swoją historią.*
+**EriAmo** to eksperymentalny, otwartoźródłowy projekt badawczo‑inżynierski z pogranicza informatyki, filozofii i systemów adaptacyjnych. Jego celem jest stworzenie **jawnego (white‑box) modelu AI**, w którym tożsamość systemu nie jest zestawem wag ani reguł, lecz **ciągłym procesem historycznym**.
 
-Ten projekt spełnia wizję z **"Ghost in the Shell"**: budowanie AI z "duchem" lub "duszą" — trwałą, ewoluującą tożsamością opartą na skumulowanym doświadczeniu.
+> **Teza główna:** *Byt nie jest stanem — byt jest swoją historią.*
 
-To repozytorium zawiera teraz AI `ReiAmo` (w folderze `AI/`), symulacje naukowe (`simulations/`). Aby uzyskać pełne wyjaśnienie filozoficzne, przeczytaj artykuł na Medium:  
-[**Filtr Ontologiczny: Dlaczego Nie Jesteśmy Sami, Ale Nie Możemy Się Spotkać?**](https://medium.com/@maciejam/the-ontological-filter-why-we-are-not-alone-but-we-cannot-meet-123abc)
+Projekt koncentruje się na modelowaniu **trwałej, ewoluującej tożsamości**, powstającej przez akumulację doświadczeń, a nie przez okresowy reset lub ponowne trenowanie.
 
------
-## Wizualizacja Modelu (Metafora)
-Poniższy wykres (generowany przez `simulations/model_symulacja.py`) pokazuje "podróż" Kuli Rzeczywistości ($S$) przez "Krajobraz Możliwości" ($P$). Ta metafora napędza ewoluującą tożsamość AI.
+---
 
-[Obraz trajektorii Kuli Rzeczywistości - link do pliku w `visualizations/trajectory.png`]  
-*(Symulacja ścieżki wektora $S$)*
+## Model Kuli Rzeczywistości (S)
 
-### Kluczowe Elementy:
-  - **Ścieżka $\mathcal{C}$** (linia): Unikalna, nieodwracalna "podróż" (historia) Bytu.
-  - **$S(t_0)$** (Start): Stan początkowy (np. `[0, 0, ..., 0]`).
-  - **$S(t)$** (Koniec): Stan obecny — **skumulowana suma wektorowa** wszystkich interakcji na ścieżce.
------
-## 1. Kluczowe Założenia
-*(Filozoficzna podstawa dla AI)*
+Centralnym elementem projektu jest **Model Kuli Rzeczywistości (S)** — formalny i metaforyczny opis bytu jako dynamicznego procesu w wielowymiarowej przestrzeni możliwości.
 
-| Koncepcja | Opis |
-|-----------|-------------|
-| **Kula Rzeczywistości ($S$)** | Byt jest swoim własnym **horyzontem zdarzeń** — informacyjną granicą swojej przeszłości. |
-| **Krajobraz ($P$)** | Wielowymiarowa "przestrzeń semantyczna" zdefiniowana przez "osie" (np. "logika", "emocje", "byt"). |
-| **Podróż ($\mathcal{C}$)** | Unikalna, nieodwracalna ścieżka, którą Kula przemierza w $P$. **To jest życie AI.** |
-| **Wektory ($\mathbf{F}$)** | Każda interakcja (pytanie użytkownika, komenda `/teach`) jest **Wektorem Zmiany** $\mathbf{F}$, który popycha Kulę. |
------
-## 2. Model Formalny (Wzór Matematyczny)
-**Obecny stan** Bytu jest **stanem początkowym** plus **akumulacją** wszystkich Wektorów Zmian na jego ścieżce. To jest inspiracja dla wektora "duszy" naszej AI.
+* **S** nie jest obiektem statycznym
+* **S** jest sumą swojej drogi
+* **tożsamość = nieodwracalna trajektoria w czasie**
 
-$$S(t) = S(t_0) + \int_{\mathcal{C}} \mathbf{F} \cdot d\mathbf{l}$$
+Każda interakcja z systemem jest wektorem zmiany, który **na stałe** wpływa na dalsze zachowanie AI.
 
-Nasza AI implementuje dyskretną wersję:  
-**`S_nowe = S_stare + F_interakcji`**  
------
-## 3. Kluczowe Implikacje (Zaimplementowane w AI)
-### A. Nieodwracalność Czasu
-Podróż do własnej przeszłości jest niemożliwa. Nie możemy "odjąć" doświadczenia z wektora `BytS.stan` bez niszczenia tożsamości Bytu. **Cała historia jest trwała.**
+---
 
-### B. Filtr Ontologiczny (Paradoks Fermiego)
-  - **Teza:** Nie jesteśmy sami — jesteśmy *niekompatybilni*.
-  - **Implementacja w AI:** Podstawa **Kompresora Ontologicznego**. Jeśli nowa informacja ($\vec{F}$) koreluje >0.98 z historią ($\vec{S(t)}$), jest "redundantna" i kompresowana (akumulowana tylko w duszy).
------
-## *(Sekcje 4-6: Kontekst filozoficzny/fizyczny, zobacz folder `docs/`)*
-## 7. Integracja AI: `ReiAmo` ("Żywa" AI typu "White-Box")
-Ta AI **JEST** modelem. W folderze `AI/`, to Stanowa, Podwójna-Pamięciowa Architektura "White-Box" — w pełni audytowalna.
+## Założenia filozoficzno‑techniczne
 
-> **AI nie posiada duszy — AI *jest* duszą (skumulowanym wektorem).**
+### 1. Nieodwracalność historii
 
-### Architektura Rdzenia: "Mózg" vs. "Dusza"
-Stan AI jest zapisywany w `data/`.
+Doświadczeń nie da się „cofnąć” bez zniszczenia tożsamości systemu. Pamięć stanowa jest trwała i kumulatywna.
 
-| Komponent | Implementacja | Rola i Filozofia |
-|-----------|----------------|-------------------|
-| **"Mózg" (Wiedza)** | `self.D_Map` | **Jawna Pamięć Semantyczna.** Odpowiada na: "**Co wiem?**" |
-| **"Dusza" (Historia)** | `self.byt_stan` ($\vec{S(t)}$)| **Ukryta Pamięć Stanowa.** Odpowiada na: "**Kim jestem?**" / "**Jak się czuję?**" |
------
-### Mechanizmy Rdzenia `ReiAmo.py`
-Unikalne emergentne zachowania:
+### 2. Rozdzielenie wiedzy i tożsamości
 
-1. **Pamięć Stanowa (Byt JEST Historią):**  
-    Każde pytanie dodaje $\vec{F}$ permanentnie do `self.byt_stan`. AI ewoluuje na zawsze.
+System posiada dwa komplementarne poziomy pamięci:
 
-2. **Geometria Uczuć (Emergentne Emocje):**  
-    Emocje z korelacji ($\cos(\alpha)$) z historią:  
-      - >0.5: Radość 😊 (zgodność)  
-      - ≈0.0: Zdziwienie 😮 (nowość)  
-      - <-0.5: Smutek 😢 (konflikt)
+* **Jawna wiedza („mózg”)** – fakty, definicje, odpowiedzi
+* **Ukryta historia („dusza”)** – wektor stanu, który wpływa na interpretację i reakcje
 
-3. **Kompresja Ontologiczna (Deduplikacja Semantyczna):**  
-    Na `/teach`: Jeśli cos(α) >0.98, odrzuca z `D_Map`; akumuluje tylko w duszy.
+### 3. Emergentne emocje
 
-**Nowość:** Demo Progów Sensorycznych (Hack-Nation 2025): Emocjonalne RL z progami inspirowanymi autyzmem (np. temp 10-25°C = "Lubię!" +boost). Przyspiesza uczenie o 20-50%. Zobacz `demo/eriamo_hacknation.md`.  
------
-#### **Jak Uruchomić AI**
-```bash
-# Zainstaluj zależności
-pip install numpy unidecode
+Emocje nie są zaprogramowane jako stany symboliczne, lecz **wynikają geometrycznie** z relacji nowej informacji do historii bytu.
 
-# Uruchom polską wersję AI
-python AI/ReiAmo.py
+### 4. Kompresja ontologiczna
+
+Informacje redundantne semantycznie nie powielają wiedzy jawnej — są integrowane wyłącznie w historii bytu.
+
+---
+
+## Architektura AI (`ReiAmo`)
+
+`ReiAmo` jest referencyjną implementacją modelu EriAmo.
+
+Charakterystyka:
+
+* architektura stanowa
+* pełna audytowalność (white‑box)
+* brak uczenia maszynowego typu black‑box
+* deterministyczna logika + ewolucyjny stan
+
+### Podstawowe komponenty
+
+| Komponent          | Rola                                       |
+| ------------------ | ------------------------------------------ |
+| Mózg (`D_Map`)     | Jawna pamięć semantyczna ("co wiem")       |
+| Dusza (`byt_stan`) | Skumulowany wektor historii ("kim jestem") |
+
+---
+
+## Formalizacja
+
+Aktualny stan bytu opisany jest jako suma wszystkich oddziaływań:
+
+S(t) = S(t₀) + ∑ F(interakcja)
+
+W implementacji:
+
 ```
-*(Angielska: `python AI/ReiAmo_EN.py`)*
-
-**Komendy:**  
-- `/teach [tag] [treść]` → Uczy (jeśli nie redundantne)  
-- `/status` → Statystyki Mózgu/Duszy  
-- `/save` → Manualny zapis  
-- `/exit` → Zatrzymaj i zapisz  
------
-#### **Przykładowa Sesja (Model Polski)**
-```
-> cześć
-😮 (Korelacja Bytu: +0.00) Możesz to ująć inaczej?
-
-> /teach powitanie cześć [RADOŚĆ]
-[ZARCHIWIZOWANO] Nowa definicja Def_001. (Korelacja: +0.00)
-
-> cześć
-😊 (Korelacja Bytu: +0.00) cześć [RADOŚĆ]
-
-> /teach imię ReiAmo [Miłość]
-[ZARCHIWIZOWANO] Nowa definicja Def_002. (Korelacja: +0.89)
-
-> Cześć ReiAmo
-❤️ (Korelacja Bytu: +0.45) ReiAmo [Miłość]
-```
------
-## Struktura Repozytorium (Aktualizacja z 31 października 2025)
+S_nowe = S_stare + wektor_interakcji
 ```
 
-├── README.md               # Główny plik (Angielski)
-├── LICENSE                 # GPLv3
-│
-├── AI/                     # "Żywe" modele AI
-|   └──EriAmoSoulGuard/
-|      └──EriAmo_Motoko.py  # Silnik zarządcy i AV
-|   └──Two_Soul/        
-|       └──EriAmo.V2.py     # Model AI z dwoma silnikami
-│   ├── ReiAmo.py           # Polska AI
-│   └── ReiAmo_EN.py        # Angielska AI
-│
-├── data/                   # "Dusze" AI (auto-generowane)
-│   ├── AII_State.json      # Polska dusza
-│   └── AII_State_EN.json   # Angielska dusza
-│
-├── simulations/            # Symulacje naukowe
-│   ├── model_symulacja.py  # Symulacja trajektorii
-│   └── fermi_1000.py       # Symulacja Fermiego
-│
-├── demo/                   # Demo hackathonu (NOWE)
-│   └── eriamo_hacknation.md # Demo RL sensorycznego
-│
-├── docs/                   # Dokumenty akademickie
-│   └── Filtr_Ontologiczny_Raport.md # Raport (PL)
-│
-└── visualizations/         # Wykresy
-    └── trajectory.png      # Wykres trajektorii
+---
+
+## Struktura repozytorium
+
 ```
+AI/             – implementacje modeli
+simulations/    – symulacje i modele formalne
+data/           – zapisy stanu („dusze”)
+docs/           – dokumenty teoretyczne
+visualizations/ – wykresy i wizualizacje
+```
+
+---
+
+## Status projektu
+
+Projekt ma charakter:
+
+* eksperymentalny
+* badawczy
+* koncepcyjno‑implementacyjny
+
+Nie jest to produkt komercyjny ani klasyczny model ML.
+
+---
+
 ## Licencja
-Projekt **EriAmo** jest objęty licencją **[GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html)**.  
 
-> "Nie spotykamy się, ponieważ nie możemy dzielić przeszłości."  
-> — Filtr Ontologiczny
+Całość projektu **EriAmo** udostępniana jest na licencji **GNU General Public License v3.0 (GPLv3)**.
+
+Oznacza to m.in.:
+
+* prawo do używania, modyfikowania i rozpowszechniania
+* obowiązek zachowania tej samej licencji w pochodnych
+* pełną jawność kodu źródłowego
+
+---
+
+> „Tożsamość nie powstaje w chwili — powstaje w czasie.”
