@@ -1,0 +1,54 @@
+{"_type": "@META", "name": "EriAmo", "format_version": "2.1-Hybrid", "created_at": 1765721057, "total_mass": 28.0204, "definition_count": 13, "axiom_count": 2}
+{"_type": "@DIMENSIONS", "data": ["logika", "emocje", "byt", "walka", "kreacja", "wiedza", "czas", "przestrzeń"]}
+{"_type": "@STATE", "energy": 95, "emotion": "smutek", "F_will": 0.5, "context_vector": {"emocje": 0.7841, "byt": 0.0056, "walka": 0.2464, "kreacja": 0.1142, "wiedza": 0.0701}, "context_decay": 0.8, "status": "myślę"}
+{"_type": "@BYT", "stan": {"logika": 2.0, "emocje": 19.7773, "byt": 1.4472, "walka": 8.9884, "kreacja": 17.2578, "wiedza": 2.8783, "czas": 1.0}, "promien": 28.0204}
+{"_type": "@CORE", "id": "Def_001", "vector": {"kreacja": 1.0}, "content": "Instrument to przedmiot służący do tworzenia muzyki.", "weight": 100.0, "tags": ["[Definicja]"], "category": "kreacja", "created_at": 1765717477.875461}
+{"_type": "@MEMORY", "id": "Def_002", "vector": {"kreacja": 1.0}, "content": "Trąbka jest głośnym instrumentem dętym.", "weight": 10.0, "tags": ["[Przykład]"], "category": "kreacja", "created_at": 1765717478.4838169}
+{"_type": "@MEMORY", "id": "Def_003", "vector": {"logika": 1.0}, "content": "Przyczyną Hołdu Pruskiego była sekularyzacja zakonu.", "weight": 10.0, "tags": ["[Historia]"], "category": "logika", "created_at": 1765717479.0730548}
+{"_type": "@MEMORY", "id": "Def_004", "vector": {"emocje": 1.0}, "content": "złość", "weight": 10.0, "tags": ["emocja"], "category": "emocje", "created_at": 1765719083.1606822}
+{"_type": "@MEMORY", "id": "Def_005", "vector": {"emocje": 1.0}, "content": "miłość", "weight": 10.0, "tags": ["uczucie"], "category": "emocje", "created_at": 1765719122.6077852}
+{"_type": "@MEMORY", "id": "Def_006", "vector": {"emocje": 1.0}, "content": "lubię", "weight": 10.0, "tags": ["emocja"], "category": "emocje", "created_at": 1765719170.930232}
+{"_type": "@MEMORY", "id": "Def_007", "vector": {"kreacja": 1.0}, "content": "ogień", "weight": 10.0, "tags": ["ból"], "category": "kreacja", "created_at": 1765719915.5688045}
+{"_type": "@MEMORY", "id": "Def_008", "vector": {"emocje": 1.0}, "content": "strach", "weight": 10.0, "tags": ["emocja"], "category": "emocje", "created_at": 1765719976.8799627}
+{"_type": "@MEMORY", "id": "Def_009", "vector": {"kreacja": 0.5665, "wiedza": 0.8241}, "content": "ogień rani", "weight": 10.0, "tags": ["wiedza"], "category": "wiedza", "created_at": 1765720038.763708}
+{"_type": "@MEMORY", "id": "Def_010", "vector": {"walka": 0.9915, "kreacja": 0.1298}, "content": "Ogień to żywioł który parzy i niszczy.", "weight": 10.0, "tags": ["Walka"], "category": "walka", "created_at": 1765720187.3974872}
+{"_type": "@MEMORY", "id": "Def_011", "vector": {"emocje": 0.7793, "walka": 0.5415, "kreacja": 0.3154}, "content": "Ogień to ból", "weight": 10.0, "tags": ["Walka"], "category": "emocje", "created_at": 1765720238.946482}
+{"_type": "@MEMORY", "id": "Def_012", "vector": {"emocje": 0.8831, "wiedza": 0.4691}, "content": "ból to zło", "weight": 10.0, "tags": ["wiedza"], "category": "emocje", "created_at": 1765720703.961648}
+{"_type": "@CORE", "id": "Def_013", "vector": {"emocje": 0.3184, "walka": 0.9285, "wiedza": 0.191}, "content": "Ból to cierpienie i zło, przeciwieństwo miłości.", "weight": 100.0, "tags": ["Walka"], "category": "walka", "created_at": 1765721042.3813775}
+{"_type": "@HISTORY", "prompt": "Czym jest trąbka?", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "Lubisz ser?", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "Czym jest ogień?", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "przyczyna hołdu Pruskiego?", "response": "Przyczyną Hołdu Pruskiego była sekularyzacja zakonu."}
+{"_type": "@HISTORY", "prompt": "muzyka", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "co to jest instrument muzyczny", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "jak grać dźwięki?", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "exit", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "dźwięki", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "/teac/teachword cisza czas", "response": "Instrument to przedmiot służący do tworzenia muzyki."}
+{"_type": "@HISTORY", "prompt": "muzyka", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "instrument", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "huk", "response": "Instrument to przedmiot służący do tworzenia muzyki."}
+{"_type": "@HISTORY", "prompt": "walka", "response": "Instrument to przedmiot służący do tworzenia muzyki."}
+{"_type": "@HISTORY", "prompt": "/sen", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "hołd pruski", "response": "Instrument to przedmiot służący do tworzenia muzyki."}
+{"_type": "@HISTORY", "prompt": "złość", "response": "złość"}
+{"_type": "@HISTORY", "prompt": "miłość", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "Maciek lubi EriAmo", "response": "złość"}
+{"_type": "@HISTORY", "prompt": "nie złość tylko lubi", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "lubie cie", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ogień", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "ogień budzi strach", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ogień", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "ogień", "response": "Trąbka jest głośnym instrumentem dętym."}
+{"_type": "@HISTORY", "prompt": "ogień to ból", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "strach to ból", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ogień to bół", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ogień to ból", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ogień", "response": "Ogień to żywioł który parzy i niszczy."}
+{"_type": "@HISTORY", "prompt": "ogień", "response": "Ogień to ból"}
+{"_type": "@HISTORY", "prompt": "ból", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ból to zło", "response": "złość"}
+{"_type": "@HISTORY", "prompt": "ból", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ból", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ból nie miłość, ból zło", "response": "miłość"}
+{"_type": "@HISTORY", "prompt": "ból", "response": "złość"}
