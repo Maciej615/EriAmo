@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # explorer.py - Autonomous Filesystem Explorer dla EriAmo
+# Copyright (C) 2025 Maciej Mazur (maciej615)
+# EriAmo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 """
 Moduł eksploracji świata fizycznego przez autonomiczne odkrywanie
 sygnałów z hardware (sensory, logi, urządzenia).
