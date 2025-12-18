@@ -2,7 +2,11 @@
 # soul_io.py v2.1 - Hybrid Soul Handler (JSONL + Legacy Migration)
 # Changelog:
 #   - ADD: Automatyczne wykrywanie i migracja formatu v1.x (JSON) -> v2.x (JSONL)
-
+# Copyright (C) 2025 Maciej Mazur (maciej615)
+# EriAmo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 import json
 import time
 import numpy as np
