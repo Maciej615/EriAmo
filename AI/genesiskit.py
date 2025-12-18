@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 # genesis_gramatyka.py - Rozbudowany Genesis z Szkieletami Gramatycznymi
 # Setki naturalnych przykładów dla każdej emocji - fundament dla przyszłych instalacji
+# Copyright (C) 2025 Maciej Mazur (maciej615)
+# EriAmo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
 from aii import AII
 from config import Colors
