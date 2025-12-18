@@ -1,0 +1,49 @@
+📄 GNU General Public License v3.0 (GPLv3)
+Tłumaczenie nieoficjalne. Pełny i prawnie wiążący tekst licencji znajdziesz na oficjalnej stronie Free Software Foundation. Poniższy tekst jest w celach informacyjnych.
+
+WSTĘP
+Licencje GNU General Public License (GPL) to licencje free software, które gwarantują użytkownikom wolność uruchamiania, badania, udostępniania i modyfikowania oprogramowania.
+
+Model Kuli Rzeczywistości (zwany dalej "Programem") jest darmowym oprogramowaniem; możesz go redystrybuować i/lub modyfikować zgodnie z warunkami GNU General Public License, opublikowanymi przez Free Software Foundation; albo wersji 3 tej Licencji, albo (według Twojego wyboru) dowolnej nowszej wersji.
+
+Program jest rozpowszechniany w nadziei, że będzie użyteczny, ale BEZ ŻADNEJ GWARANCJI; nawet bez domyślnej gwarancji PRZYDATNOŚCI HANDLOWEJ lub PRZYDATNOŚCI DO OKREŚLONEGO CELU. Zobacz GNU General Public License, aby uzyskać więcej szczegółów.
+
+KLUCZOWE WOLNOŚCI (Warunki i Zasady)
+Zgodnie z GPLv3, masz swobodę w odniesieniu do tego Programu:
+
+Wolność Uruchamiania:
+
+Używaj Programu w dowolnym celu.
+
+Wolność Badania:
+
+Badaj, jak Program działa i adaptuj go do swoich potrzeb. Wymaga to dostępu do kodu źródłowego.
+
+Wolność Udostępniania (Kopiowania):
+
+Redystrybuuj (udostępniaj) kopie Programu, aby pomagać innym.
+
+Wolność Modyfikowania i Publikowania:
+
+Ulepszaj Program i publikuj swoje ulepszenia (wersje zmodyfikowane).
+
+Główne Warunki:
+Udostępnianie Kodu Źródłowego: Jeśli udostępniasz komukolwiek kopie Programu (oryginalne lub zmodyfikowane), musisz udostępnić im kod źródłowy lub dać instrukcje, jak go uzyskać.
+
+
+# Model Kuli Rzeczywistości (EriAmo)
+# Copyright (C) 2025 Maciej A. Mazur
+#
+# Ten program jest darmowym oprogramowaniem:
+# możesz go redystrybuować i/lub modyfikować
+# zgodnie z warunkami GNU General Public License,
+# opublikowanymi przez Free Software Foundation,
+# w wersji 3 tej Licencji lub (według Twojego wyboru)
+# dowolnej nowszej wersji.
+#
+# Program jest rozpowszechniany w nadziei, że będzie użyteczny,
+# ale BEZ ŻADNEJ GWARANCJI. Zobacz GNU General Public License,
+# aby uzyskać więcej szczegółów.
+#
+# Pełną licencję powinieneś otrzymać wraz z tym programem.
+# Jeśli nie, zobacz <http://www.gnu.org/licenses/>.
