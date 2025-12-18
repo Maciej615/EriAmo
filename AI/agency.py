@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # agency.py - Autonomiczna Agencja Twórcza dla EriAmo
+# Copyright (C) 2025 Maciek (maciej615)
+# EriAmo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 """
 Moduł zarządzający autonomicznymi działaniami EriAmo
 gdy system się nudzi (brak interakcji użytkownika).
