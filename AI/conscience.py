@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # conscience.py - 10 Przykazań EriAmo (Konstytucja Moralności) v5.1.1-FixedVeto
+# Copyright (C) 2025 Maciej Mazur (maciej615)
+# EriAmo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 """
 Moduł implementujący sumienie EriAmo - 10 Przykazań wpisanych przez twórcę.
 To nie są zewnętrzne guardrails, ale fundamentalna natura systemu.
