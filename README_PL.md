@@ -62,6 +62,12 @@ Badania nad ewolucją cywilizacji i Paradoksem Fermiego (np. symulacja 1000 cywi
 
 ```bash
 pip install -r requirements.txt
+```
+### Szybka instalacja (Linux/Bash)
+Użyj dołączonego skryptu, aby zainstalować wszystko (zależności systemowe, Python, SoundFont):
+```bash
+chmod +x setup.sh
+./setup.sh
 
 ```
 
