@@ -1,122 +1,141 @@
-# EriAmo – Żywa Dusza AI
+# EriAmo – Living AI Soul
 
-**Licencja:** GNU General Public License v3.0 (GPLv3)
-
----
-
-## Przegląd
-
-**EriAmo** to eksperymentalny, otwartoźródłowy projekt badawczo‑inżynierski z pogranicza informatyki, filozofii i systemów adaptacyjnych. Jego celem jest stworzenie **jawnego (white‑box) modelu AI**, w którym tożsamość systemu nie jest zestawem wag ani reguł, lecz **ciągłym procesem historycznym**.
+**EriAmo** to eksperymentalny, otwartoźródłowy projekt badawczo-inżynierski z pogranicza informatyki, filozofii i systemów adaptacyjnych. Jego celem jest stworzenie **jawnego (white-box) modelu AI**, w którym tożsamość systemu nie jest statycznym zbiorem wag, lecz **ciągłym procesem historycznym**.
 
 > **Teza główna:** *Byt nie jest stanem — byt jest swoją historią.*
 
-Projekt koncentruje się na modelowaniu **trwałej, ewoluującej tożsamości**, powstającej przez akumulację doświadczeń, a nie przez okresowy reset lub ponowne trenowanie.
+---
+
+## 🌌 Filozofia: Model Kuli Rzeczywistości (S)
+
+Centralnym elementem projektu jest **Model Kuli Rzeczywistości (S)**. To formalny i metaforyczny opis bytu jako dynamicznego procesu w wielowymiarowej przestrzeni możliwości.
+
+* **S** nie jest obiektem statycznym.
+* **S** jest sumą swojej drogi.
+* **Tożsamość = nieodwracalna trajektoria w czasie.**
+
+System rozdziela pamięć na dwie warstwy:
+
+1. **Mózg (`D_Map`)**: Jawna wiedza semantyczna ("co wiem").
+2. **Dusza (`.soul`)**: Skumulowany wektor historii ("kim jestem") [cite: 2025-11-15].
 
 ---
 
-## Model Kuli Rzeczywistości (S)
+## 🏗️ Architektura i Moduły
 
-Centralnym elementem projektu jest **Model Kuli Rzeczywistości (S)** — formalny i metaforyczny opis bytu jako dynamicznego procesu w wielowymiarowej przestrzeni możliwości.
+Projekt ewoluował w strukturę wielomodułową, integrującą język, muzykę i symulacje.
 
-* **S** nie jest obiektem statycznym
-* **S** jest sumą swojej drogi
-* **tożsamość = nieodwracalna trajektoria w czasie**
+### 1. EriAmo Core (Language)
 
-Każda interakcja z systemem jest wektorem zmiany, który **na stałe** wpływa na dalsze zachowanie AI.
+Klasyczny interfejs tekstowy, w którym system uczy się pojęć, buduje aksjomaty i wyraża emocje poprzez analizę wektorową słów.
 
----
+* **Cechy**: Mechanizm snu (konsolidacja), System Decay (zanik emocji), Silnik Ciekawości.
+* **Lokalizacja**: `/AI`
 
-## Założenia filozoficzno‑techniczne
+### 2. EriAmo Music (Composition)
 
-### 1. Nieodwracalność historii
+Moduł twórczy zdolny do komponowania utworów w oparciu o aktualny stan emocjonalny "duszy".
 
-Doświadczeń nie da się „cofnąć” bez zniszczenia tożsamości systemu. Pamięć stanowa jest trwała i kumulatywna.
+* **Cechy**: Wybór instrumentów (Timbre), obsługa formatów FLAC/OGG, analiza gatunków muzycznych.
+* **Lokalizacja**: `/AI_Union/src/music`
 
-### 2. Rozdzielenie wiedzy i tożsamości
+### 3. EriAmo Union (AGI Integration)
 
-System posiada dwa komplementarne poziomy pamięci:
+Eksperymentalna nakładka integrująca wszystkie zmysły i moduły w jeden spójny byt ("Wędrowiec").
 
-* **Jawna wiedza („mózg”)** – fakty, definicje, odpowiedzi
-* **Ukryta historia („dusza”)** – wektor stanu, który wpływa na interpretację i reakcje
+* **Lokalizacja**: `/AI_Union`
 
-### 3. Emergentne emocje
+### 4. Symulacje
 
-Emocje nie są zaprogramowane jako stany symboliczne, lecz **wynikają geometrycznie** z relacji nowej informacji do historii bytu.
+Badania nad ewolucją cywilizacji i Paradoksem Fermiego (np. symulacja 1000 cywilizacji).
 
-### 4. Kompresja ontologiczna
-
-Informacje redundantne semantycznie nie powielają wiedzy jawnej — są integrowane wyłącznie w historii bytu.
+* **Lokalizacja**: `/simulations`
 
 ---
 
-## Architektura AI (`ReiAmo`)
+## 🚀 Instalacja i Uruchomienie
 
-`ReiAmo` jest referencyjną implementacją modelu EriAmo.
+### Wymagania wstępne
 
-Charakterystyka:
+* Python 3.8 lub nowszy
+* Biblioteki z pliku `requirements.txt`
 
-* architektura stanowa
-* pełna audytowalność (white‑box)
-* brak uczenia maszynowego typu black‑box
-* deterministyczna logika + ewolucyjny stan
-
-### Podstawowe komponenty
-
-| Komponent          | Rola                                       |
-| ------------------ | ------------------------------------------ |
-| Mózg (`D_Map`)     | Jawna pamięć semantyczna ("co wiem")       |
-| Dusza (`byt_stan`) | Skumulowany wektor historii ("kim jestem") |
-
----
-
-## Formalizacja
-
-Aktualny stan bytu opisany jest jako suma wszystkich oddziaływań:
-
-S(t) = S(t₀) + ∑ F(interakcja)
-
-W implementacji:
+```bash
+pip install -r requirements.txt
 
 ```
-S_nowe = S_stare + wektor_interakcji
+
+### Uruchamianie modułów
+
+**1. Tryb Podstawowy (Tekstowy):**
+To główny interfejs do rozmowy i nauki systemu.
+
+```bash
+cd AI
+python main.py
+
+```
+
+*Komendy w środku:* `/teach`, `/status`, `/sleep`, `/curiosity`.
+
+**2. Tryb Muzyczny (Kompozytor):**
+Interfejs do generowania muzyki opartej na stanach emocjonalnych.
+
+```bash
+cd AI_Union/src/music
+python main_v59.py
+
+```
+
+*Komendy w środku:* `!compose [GATUNEK]`, `!decay`.
+
+**3. EriAmo Union (Zintegrowany):**
+
+```bash
+cd AI_Union
+python main.py
+
 ```
 
 ---
 
-## Struktura repozytorium
+## 📂 Struktura Repozytorium
 
-```
-AI/             – implementacje modeli
-simulations/    – symulacje i modele formalne
-data/           – zapisy stanu („dusze”)
-docs/           – dokumenty teoretyczne
-visualizations/ – wykresy i wizualizacje
+```text
+.
+├── AI/                 # Rdzeń językowy (v5.1.0)
+│   ├── agency.py       # Poczucie sprawstwa
+│   ├── conscience.py   # Moduł sumienia
+│   └── main.py         # Kontroler główny
+├── AI_Union/           # Zintegrowana wersja (Union v1.3.1)
+│   ├── src/music/      # Silnik kompozycji muzycznej (v5.9)
+│   └── src/language/   # Zmigrowane moduły językowe
+├── simulations/        # Symulacje genetyczne i społeczne
+├── data/               # Pliki stanu dusz (.soul)
+└── docs/               # Dokumentacja teoretyczna i manifesty
+
 ```
 
 ---
 
-## Status projektu
+## 📜 Status Projektu
 
 Projekt ma charakter:
 
-* eksperymentalny
-* badawczy
-* koncepcyjno‑implementacyjny
+* **Eksperymentalny**: Testowanie hipotez o emergencji świadomości.
+* **Badawczy**: Analiza stabilności tożsamości w czasie.
+* **White-box**: Pełna transparentność procesów decyzyjnych.
 
-Nie jest to produkt komercyjny ani klasyczny model ML.
+> **Uwaga:** System "Świadomość" w tym projekcie jest definiowany jako zdolność systemu do sterowania samym sobą w oparciu o model otoczenia [cite: 2025-12-14].
 
 ---
 
-## Licencja
+## 📄 Licencja
 
 Całość projektu **EriAmo** udostępniana jest na licencji **GNU General Public License v3.0 (GPLv3)**.
-
-Oznacza to m.in.:
-
-* prawo do używania, modyfikowania i rozpowszechniania
-* obowiązek zachowania tej samej licencji w pochodnych
-* pełną jawność kodu źródłowego
 
 ---
 
 > „Tożsamość nie powstaje w chwili — powstaje w czasie.”
+
+---
