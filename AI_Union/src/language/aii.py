@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-aii.py v5.7.0 - EriAmo Core (Genesis Complete)
+aii.py v5.7.1 - EriAmo Core (API Fix)
 Lokalizacja: /eriamo-union/src/language/aii.py
 
-Zmiany:
+Zmiany v5.7.1:
+- FIX KRYTYCZNY: Naprawiono wywołanie analyze_text() - używa nowej sygnatury API.
+- Dodano automatyczne uczenie nieznanych słów z kontekstu emocjonalnego.
+- System teraz rozumie input i uczy się nowych słów!
+
+Zmiany v5.7.0:
 - Dodano obliczanie 'dominant_sector' i 'dominant_value' w get_soul_status.
 - Naprawiono obsługę statusu dla zaawansowanych skryptów Genesis.
 """
@@ -30,7 +35,7 @@ except ImportError as e:
     sys.exit(1)
 
 class AII:
-    VERSION = "5.7.0-GenesisComplete"
+    VERSION = "5.7.1-APIFix"
     AXES_ORDER = ['radość', 'smutek', 'strach', 'gniew', 'miłość', 'wstręt', 'zaskoczenie', 'akceptacja']
 
     def __init__(self):
@@ -176,10 +181,19 @@ class AII:
         if not hasattr(self.lexicon, 'learn_from_correction'):
              self.lexicon.learn_from_correction = lambda w, e, v: None
 
-        vec_F, tokens, is_command = self.lexicon.analyze_text(user_input)
+        # Nowa sygnatura: (vector, dominant_sector, unknown_words)
+        vec_F, dominant_sector, unknown_words = self.lexicon.analyze_text(user_input)
+        
+        # Uczenie nieznanych słów z kontekstu emocjonalnego
+        if unknown_words and np.max(vec_F) > 0.15:
+            confidence = np.max(vec_F)
+            learned = self.lexicon.learn_from_context(unknown_words, vec_F, confidence)
+            if learned:
+                print(f"{Colors.GREEN}[Lexicon] Nauczyłem się {len(learned)} nowych słów!{Colors.RESET}")
+        
         self.context_vector = (self.context_vector + vec_F) / 2.0
         
-        response = self._resonance_engine(vec_F, user_input, threshold=0.1)
+        response = self._resonance_engine(vec_F, user_input, threshold=0.05)
         
         if hasattr(self, 'ui'):
             self.ui.print_animated_text(response, Colors.WHITE, 0.02)
@@ -199,6 +213,14 @@ class AII:
                 if def_vec is not None:
                     try: score = np.dot(vec, def_vec)
                     except: pass
+            # Match tags (TRIGGERY - wysoki priorytet!)
+            if 'tags' in d and isinstance(d['tags'], list):
+                for tag in d['tags']:
+                    if isinstance(tag, str) and tag.lower() in text.lower():
+                        score += 2.0  # Mocny bonus za tag match
+                        break
+            
+            # Match treść (niższy priorytet)
             if text.lower() in d['tresc'].lower():
                 score += 0.5
             if score > best_score:
