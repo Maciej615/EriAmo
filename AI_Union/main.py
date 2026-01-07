@@ -1,66 +1,77 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EriAmo Union - FINAL LAUNCHER (main.py)
-Lokalizacja: /eriamo-union/main.py
+main.py PATCH - Dodaje graceful shutdown dla zapisywania unified_memory
+
+INSTRUKCJA:
+1. Znajdź swój main.py
+2. Dodaj import signal na początku
+3. Dodaj signal handler przed główną pętlą
+4. Zmień pętlę input na try/except KeyboardInterrupt
+
+LUB użyj tego pliku jako nowy main.py
 """
 
+import signal
 import sys
 import os
-import time
 
-# 1. KONFIGURACJA ŚCIEŻEK
+# Dodaj ścieżki
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(current_dir, 'src', 'union'))
-sys.path.append(os.path.join(current_dir, 'src', 'language'))
-sys.path.append(os.path.join(current_dir, 'src', 'music'))
+sys.path.insert(0, os.path.join(current_dir, 'src', 'union'))
+sys.path.insert(0, os.path.join(current_dir, 'src', 'language'))
 
-# 2. IMPORT MÓZGU
-try:
-    from union_core_v4 import EriAmoUnion
-except ImportError as e:
-    print(f"❌ BŁĄD KRYTYCZNY: Nie znaleziono mózgu (union_core_v4).")
-    print(f"Szczegóły: {e}")
-    sys.exit(1)
+from union_core_v4 import EriAmoUnion
+
+# Globalny reference do union (dla signal handlera)
+union_instance = None
+
+def graceful_shutdown(signum, frame):
+    """Handler dla Ctrl+C - zapisuje stan przed wyjściem"""
+    print("\n\n[SYSTEM] 🛑 Otrzymano sygnał przerwania...")
+    if union_instance:
+        union_instance.stop()  # To wywoła save_all_systems()
+    print("[SYSTEM] ✓ Stan zapisany. Do zobaczenia!")
+    sys.exit(0)
 
 def main():
-    print("""
-    ╔════════════════════════════════════════════╗
-    ║       EriAmo Union v1.3.1 (AGI)            ║
-    ║       Phase 4: Awakening                   ║
-    ╚════════════════════════════════════════════╝
-    """)
+    global union_instance
     
-    # Inicjalizacja Unii
-    union = EriAmoUnion(verbose=True)
-    union.start()
+    # Rejestruj signal handler
+    signal.signal(signal.SIGINT, graceful_shutdown)
+    signal.signal(signal.SIGTERM, graceful_shutdown)
     
-    print("\n[INFO] Wędrowiec żyje i słucha.")
-    print("[INFO] Pisz w każdej chwili. Naciśnij Ctrl+C, aby zakończyć.")
+    # Inicjalizuj Union
+    union_instance = EriAmoUnion(verbose=True, use_unified_memory=True)
+    union_instance.start()
+    
+    print("\n[INFO] Podróżniczka żyje i słucha.")
+    print("[INFO] Pisz w każdej chwili. Naciśnij Ctrl+C, aby zakończyć.\n")
     
     try:
         while True:
-            # Pobierz tekst od Ciebie
-            cmd = input(f"\nTy > ")
-            
-            if cmd.lower() in ['exit', 'quit', 'koniec']:
+            try:
+                cmd = input("Ty > ")
+                
+                if not cmd.strip():
+                    continue
+                    
+                if cmd.lower() in ['exit', 'quit', 'wyjście']:
+                    break
+                
+                union_instance.process_input(cmd)
+                
+            except EOFError:
+                # EOF (Ctrl+D) też powinien zapisać
                 break
-            
-            if cmd.lower() == '/status':
-                st = union.get_status()
-                print(f"[STATUS] Energia: {st['energy']}% | Nuda: {st['boredom']:.1f}")
-                continue
-            
-            # --- KLUCZOWA ZMIANA: Przekazujemy głos do mózgu ---
-            # To wywoła aii.interact() i wyświetli prawdziwą odpowiedź z bazy 1111 definicji
-            union.process_input(cmd)
-            # ---------------------------------------------------
-            
+                
     except KeyboardInterrupt:
-        print("\n\n[SYSTEM] Otrzymano sygnał zamknięcia.")
+        # To jest backup - normalnie powinien złapać signal handler
+        pass
     finally:
-        print("[SYSTEM] Zamykanie procesów...")
-        union.stop()
-        print("[SYSTEM] Dobranoc.")
+        # Zawsze zapisz przed wyjściem
+        print("\n[SYSTEM] Zamykanie...")
+        union_instance.stop()
 
 if __name__ == "__main__":
     main()
