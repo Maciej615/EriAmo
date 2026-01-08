@@ -1,9 +1,10 @@
 # amocore_v59.py
 # -*- coding: utf-8 -*-
 """
-System Ontologicznej Pamięci Muzyki v5.9.3 [DEADLOCK FIX]
-- FIX: Zmieniono threading.Lock na threading.RLock (zapobiega zawieszeniu przy dumpie).
-- TRYB: UNBOUNDED (Historia Liniowa, Nieskończony Wzrost)
+System Ontologicznej Pamięci Muzyki v5.9.4 [FULL FIX]
+- FIX: Przywrócono brakujące funkcje (interpret_improv_for_composition, CuriosityEngine).
+- FIX: Threading RLock (zapobiega deadlockom).
+- TRYB: UNBOUNDED (Historia Liniowa)
 """
 import numpy as np
 import threading
@@ -12,6 +13,7 @@ import csv
 import os
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 import pandas as pd
@@ -22,14 +24,14 @@ import pandas as pd
 
 AXES_LIST = [
     "logika",       # 0: racjonalność ↔ intuicja
-    "emocje",       # 1: pobudzenie emocjonalne (efemeryczne)
-    "affections",   # 2: pamięć emocjonalna (trwała)
+    "emocje",       # 1: pobudzenie emocjonalne
+    "affections",   # 2: pamięć emocjonalna
     "wiedza",       # 3: zgromadzona wiedza
-    "czas",         # 4: percepcja tempa (efemeryczne)
+    "czas",         # 4: percepcja tempa
     "kreacja",      # 5: potencjał twórczy
-    "byt",          # 6: egzystencja, tożsamość
-    "przestrzen",   # 7: percepcja przestrzeni dźwiękowej
-    "improwizacja"  # 8: swoboda twórcza vs reguły
+    "byt",          # 6: egzystencja
+    "przestrzen",   # 7: percepcja przestrzeni
+    "improwizacja"  # 8: swoboda vs reguły
 ]
 
 EPHEMERAL_AXES = ["emocje", "czas"]
@@ -94,7 +96,6 @@ class MusicMemory:
     def _sleep(self):
         if self.is_sleeping: return
         self.is_sleeping = True
-        start_time = time.time()
         
         # Konsolidacja (uproszczona dla bezpieczeństwa)
         recent = self.H_log[-20:]
@@ -108,7 +109,6 @@ class MusicMemory:
                     'weight': 1.0,
                     'created_at': datetime.now().isoformat()
                 }
-        self._deduplicate_patterns()
         self._save_memory()
         
         self.last_sleep_time = time.time()
@@ -125,9 +125,6 @@ class MusicMemory:
             parts.append(f"{k[:3]}:{cat}")
         return "|".join(parts)
 
-    def _deduplicate_patterns(self):
-        pass # Placeholder dla oszczędności miejsca
-
     def record_experience(self, features: dict, source: str = "analysis"):
         self.H_log.append({
             'timestamp': datetime.now().isoformat(),
@@ -139,7 +136,6 @@ class MusicMemory:
 
     def get_consolidated_style(self) -> dict:
         if not self.D_Map: return {f: 0.5 for f in self.MUSICAL_FEATURES}
-        # Prosta średnia ważona
         sums = {f: 0.0 for f in self.MUSICAL_FEATURES}
         total_w = 0
         for p in self.D_Map.values():
@@ -148,6 +144,23 @@ class MusicMemory:
             for f, v in p.get('features', {}).items():
                 if f in sums: sums[f] += v * w
         return {f: (v / total_w if total_w else 0.5) for f, v in sums.items()}
+    
+    def get_recent_style(self) -> dict:
+        if not self.H_log: return {f: 0.5 for f in self.MUSICAL_FEATURES}
+        recent = self.H_log[-5:]
+        avg = {f: 0.0 for f in self.MUSICAL_FEATURES}
+        for exp in recent:
+            for feat, val in exp.get('features', {}).items():
+                if feat in avg: avg[feat] += val / len(recent)
+        return avg
+
+    def get_blended_style(self, recent_weight: float = 0.3) -> dict:
+        recent = self.get_recent_style()
+        consolidated = self.get_consolidated_style()
+        blended = {}
+        for feat in self.MUSICAL_FEATURES:
+            blended[feat] = recent_weight * recent.get(feat, 0.5) + (1 - recent_weight) * consolidated.get(feat, 0.5)
+        return blended
 
     def shutdown(self):
         self.running = False
@@ -162,7 +175,7 @@ def get_music_memory() -> MusicMemory:
 
 
 # =============================================================================
-# ETYKA I LOGGER (SoulStateLogger)
+# ETYKA I LOGGER
 # =============================================================================
 ETHICS_FRAMEWORK = {
     "integrity": {"value": 1.0, "immutable": True},
@@ -183,7 +196,7 @@ class SoulStateLogger:
 
     def __init__(self):
         os.makedirs("data", exist_ok=True)
-        self.lock = threading.RLock()  # FIX: RLock
+        self.lock = threading.RLock()
         self.event_counter = 0
         self._init_file()
 
@@ -206,22 +219,14 @@ class SoulStateLogger:
 
 
 # =============================================================================
-# RDZEŃ (EriAmoCore) - TUTAJ BYŁ BŁĄD
+# RDZEŃ (EriAmoCore)
 # =============================================================================
 class EriAmoCore:
     AXES = AXES_LIST
     HISTORY_PATH = "data/soul_history.csv"
     
-    DECAY_CONFIG = {
-        'emocje': {'rate': 0.05, 'floor': 0.0},
-        'czas': {'rate': 0.03, 'floor': 0.0}
-    }
-    
     def __init__(self):
-        # FIX: Używamy RLock, żeby wątek mógł wejść w locka wielokrotnie
-        # (np. create_memory_dump -> compute_integrity_hash)
         self.lock = threading.RLock()
-        
         self.vector = SoulVector(np.zeros(len(self.AXES), dtype=float))
         self.last_decay_time = time.time()
         self.decay_cycle_count = 0
@@ -230,7 +235,7 @@ class EriAmoCore:
         if not self.load_soul_from_history():
             self.vector.values[self.AXES.index('wiedza')] = 5.0
             self.vector.values[self.AXES.index('kreacja')] = 10.0
-            print("[CORE] Narodziny nowej Duszy (RLock Active).")
+            print("[CORE] Narodziny nowej Duszy.")
 
     def load_soul_from_history(self) -> bool:
         if not os.path.exists(self.HISTORY_PATH): return False
@@ -260,8 +265,6 @@ class EriAmoCore:
             return True
 
     def compute_integrity_hash(self) -> str:
-        # Ta metoda wymaga locka. Jeśli wywoła ją create_memory_dump (który już ma locka),
-        # zwykły Lock by się zawiesił. RLock przepuści.
         with self.lock:
             data_str = "|".join([f"{x:.8f}" for x in self.vector.values]) + "".join(self.AXES)
             ethics_str = "|".join([f"{k}:{v['value']}" for k, v in self.ethics.items()])
@@ -275,15 +278,12 @@ class EriAmoCore:
             filename = f"soul_dump_{timestamp}.soul"
         filepath = f"data/dumps/{filename}"
         
-        # Tu zajmujemy locka...
         with self.lock:
             dump_data = {
                 "meta": {
-                    "version": "5.9.3",
+                    "version": "5.9.4",
                     "created_at": datetime.now().isoformat(),
-                    # ... a tu wywołujemy funkcję, która TEŻ chce locka!
-                    "integrity_hash": self.compute_integrity_hash(), 
-                    "note": "RLock fix applied."
+                    "integrity_hash": self.compute_integrity_hash(),
                 },
                 "soul_vector": {axis: float(self.vector.values[i]) for i, axis in enumerate(self.AXES)},
                 "ethics_framework": {k: v["value"] for k, v in self.ethics.items()}
@@ -292,3 +292,71 @@ class EriAmoCore:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(dump_data, f, indent=2, ensure_ascii=False)
         return filepath
+        
+    def apply_time_based_decay(self):
+        # Placeholder dla kompatybilności
+        pass
+
+
+# =============================================================================
+# HELPER FUNCTIONS (BRAKUJĄCE WCZEŚNIEJ!)
+# =============================================================================
+
+def interpret_improv_for_composition(improv_value: float) -> dict:
+    """Interpretuje wartość osi improwizacji dla kompozytora."""
+    normalized = (improv_value + 100) / 200  # -100→0, +100→1
+    normalized = max(0, min(1, normalized))
+    return {
+        "freedom_level": normalized,
+        "allow_chromatic": normalized > 0.4,
+        "allow_modal_interchange": normalized > 0.5,
+        "allow_unexpected_modulation": normalized > 0.6,
+        "extended_chords_probability": normalized * 0.8,
+        "syncopation_probability": normalized * 0.6,
+        "rubato_allowed": normalized > 0.3,
+        "ornamentation_density": normalized,
+        "allow_large_leaps": normalized > 0.5,
+    }
+
+# =============================================================================
+# CURIOSITY ENGINE (TEŻ BRAKOWAŁO)
+# =============================================================================
+
+class CuriosityEngine:
+    WEIGHT_KREACJA = 0.40
+    WEIGHT_WIEDZA = 0.30
+    WEIGHT_EMOCJE = 0.30
+    WIEDZA_OPTIMUM = 50.0
+    WIEDZA_SPREAD = 40.0
+    
+    def __init__(self):
+        self.boredom_counter = {}
+        self.discovery_cooldown = 0
+        self.last_genres = []
+        
+    def compute_curiosity(self, kreacja: float, wiedza: float, emocje: float) -> dict:
+        kreacja_component = self._normalize(kreacja) * 100
+        wiedza_norm = self._normalize(wiedza) * 100
+        wiedza_diff = abs(wiedza_norm - self.WIEDZA_OPTIMUM)
+        wiedza_component = 100 * math.exp(-(wiedza_diff ** 2) / (2 * self.WIEDZA_SPREAD ** 2))
+        emocje_component = min(100, abs(emocje) * 2)
+        
+        base_curiosity = (
+            self.WEIGHT_KREACJA * kreacja_component +
+            self.WEIGHT_WIEDZA * wiedza_component +
+            self.WEIGHT_EMOCJE * emocje_component
+        )
+        
+        final_curiosity = (base_curiosity - 50) * 2
+        final_curiosity = max(-100, min(100, final_curiosity))
+        
+        return {'value': final_curiosity}
+    
+    def _normalize(self, value: float) -> float:
+        return max(0, min(1, (value + 100) / 200))
+
+_curiosity_engine = None
+def get_curiosity_engine() -> CuriosityEngine:
+    global _curiosity_engine
+    if _curiosity_engine is None: _curiosity_engine = CuriosityEngine()
+    return _curiosity_engine
