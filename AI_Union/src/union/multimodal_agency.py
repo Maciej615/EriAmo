@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-multimodal_agency.py v2.9.1-Focus
+multimodal_agency.py v2.9.2-MemoryFix
 EriAmo Union - Hardware Body + Creative Soul + INTERNAL CRITIC + ATTENTION
 Lokalizacja: /eriamo-union/src/union/multimodal_agency.py
 
-ZMIANY v2.9.1:
-- ATTENTION: Pętla decyzyjna respektuje flagę 'in_dialogue'.
-- FIX: Naprawiono błąd, gdzie nuda rosła w trakcie rozmowy.
+ZMIANY v2.9.2:
+- FIX: Naprawiono błąd 'missing arguments' w _action_music przy zapisie pamięci.
+- FIX: Przekazywanie stanów emocjonalnych i ontologicznych do UnifiedMemory.
 """
 
 import time
@@ -75,7 +75,7 @@ class MultimodalAgency:
     }
 
     def __init__(self, union_core, verbose: bool = True):
-        print("\n[SYSTEM] 🟢 ZAŁADOWANO: MultimodalAgency v2.9.1 (Focus)")
+        print("\n[SYSTEM] 🟢 ZAŁADOWANO: MultimodalAgency v2.9.2 (MemoryFix)")
         self.union = union_core
         self.verbose = verbose
         self.bridge = CorpusCallosum()
@@ -90,7 +90,7 @@ class MultimodalAgency:
         
         self.boredom = 0.0
         self.active = False
-        self.in_dialogue = False  # Flaga skupienia
+        self.in_dialogue = False
 
     def _force_dict(self, data, keys):
         if isinstance(data, dict):
@@ -127,24 +127,17 @@ class MultimodalAgency:
                 time.sleep(1.0)
             except Exception: pass
 
-    # --- METODA SKUPIENIA ---
     def set_focus(self, focused: bool):
-        """Włącza/wyłącza tryb skupienia na rozmowie."""
         self.in_dialogue = focused
         if focused:
-            # Gdy rozmawiamy, nuda znika natychmiast
             self.boredom = 0.0
-    # ------------------------
 
     def _decision_loop(self):
         while self.active:
-            # 1. SPRAWDZENIE SKUPIENIA (ATTENTION CHECK)
             if self.in_dialogue:
-                # Jeśli trwamy w dialogu, śpimy i nie nudzimy się
                 time.sleep(1)
                 continue
             
-            # 2. STANDARDOWA PĘTLA NUDY (tylko gdy wolny)
             time.sleep(5)
             state = self.bridge.get_state()
             soma = state['hardware']
@@ -213,7 +206,9 @@ class MultimodalAgency:
             score += 0.4
 
         score += random.random() * 0.5
-        should_keep = score > 1.0
+        
+        # Obniżony próg dla zachęty
+        should_keep = score > 0.4
         return should_keep, score
 
     def _action_music(self, state):
@@ -245,8 +240,14 @@ class MultimodalAgency:
                 if paths.get('midi'): print(f"         MIDI: {os.path.basename(paths['midi'])}")
                 
                 if hasattr(self.union, 'unified_memory'):
+                    # --- FIX: Pobieramy stany ze zmiennej state ---
+                    emotions = state.get('active_emotions', {'neutralna': 0.5})
+                    ontology = state.get('active_ontology', {k: 0.1 for k in self.ONT_AXES})
+                    
                     self.union.unified_memory.store_memory(
                         content=f"Skomponowałem {genre}. (ocena: {score:.2f}).",
+                        emotional_state=emotions,       # <--- PRZEKAZUJEMY EMOCJE
+                        ontological_state=ontology,     # <--- PRZEKAZUJEMY ONTOLOGIĘ
                         modalities={'music': True, 'creation': True},
                         category='creation',
                         tags=['music', genre]
@@ -261,8 +262,14 @@ class MultimodalAgency:
                     print(f"[ERROR] Błąd usuwania plików: {e}")
 
                 if hasattr(self.union, 'unified_memory'):
+                    # Tutaj też poprawka
+                    emotions = state.get('active_emotions', {'neutralna': 0.5})
+                    ontology = state.get('active_ontology', {k: 0.1 for k in self.ONT_AXES})
+                    
                     self.union.unified_memory.store_memory(
                         content=f"Szkicowałem {genre}, ale zabrakło iskry.",
+                        emotional_state=emotions,
+                        ontological_state=ontology,
                         modalities={'music': True, 'creation': False},
                         category='thought',
                         tags=['music', 'sketch']
@@ -284,6 +291,8 @@ class MultimodalAgency:
         if hasattr(self.union, 'unified_memory'):
             ontology = state.get('active_ontology', {})
             if not ontology: ontology = {k: 0.1 for k in self.ONT_AXES}
+            
+            # Silikonowe myśli są zazwyczaj neutralne
             self.union.unified_memory.store_memory(
                 content=f"{prefix} {thought}",
                 emotional_state={'neutralna': 0.5},
