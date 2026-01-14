@@ -8,7 +8,7 @@ Raporter Atrybucji Autorstwa EriAmo v5.9
 import pandas as pd
 import numpy as np
 import os
-from amocore_v59 import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
+from amocore import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
 
 
 class AuthorshipReporter:

@@ -12,7 +12,7 @@ def run_fusion(aii_instance):
     print(f"{Colors.BOLD}{Colors.CYAN}--- PROCES FUSION: Integracja Wiedzy (Hardcoded Path) ---{Colors.RESET}")
     
     # 1. SZTYWNA ŚCIEŻKA (Bez zgadywania)
-    base_dir = "/home/maciej/EriAmo_Union/src/language"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 2. Lista modułów w kolejności logicznej
     genesis_files = [

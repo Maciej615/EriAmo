@@ -9,7 +9,9 @@ import sys
 
 # Ustawienie ścieżki, żeby widzieć moduły obok
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
+# Fix: point to src/language
+lang_dir = os.path.abspath(os.path.join(current_dir, '..', 'src', 'language'))
+sys.path.append(lang_dir)
 
 try:
     from aii import AII
@@ -33,7 +35,7 @@ def run_fusion_fix():
     main_ai = AII()
     
     # 2. Dynamiczna ścieżka (działa na każdym komputerze)
-    base_dir = current_dir
+    base_dir = lang_dir
     print(f"📂 Katalog roboczy: {base_dir}")
     
     # 3. Lista modułów w kolejności (logika -> słowa -> matematyka)

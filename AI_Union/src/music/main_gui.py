@@ -16,10 +16,10 @@ import sys
 import matplotlib
 matplotlib.use('Agg')  # Backend bez GUI - zapobiega konfliktom z Tkinter
 
-from amocore_v59 import EriAmoCore, SoulStateLogger, AXES_LIST, EPHEMERAL_AXES
-from music_analyzer_v59 import MusicAnalyzer
-from soul_composer_v59 import SoulComposerV59
-from data_loader_v59 import ExternalKnowledgeLoader
+from amocore import EriAmoCore, SoulStateLogger, AXES_LIST, EPHEMERAL_AXES
+from music_analyzer import MusicAnalyzer
+from soul_composer import SoulComposerV59
+from data_loader import ExternalKnowledgeLoader
 from genre_definitions import list_genres
 
 # Dark mode
@@ -57,7 +57,7 @@ class EriAmoBrain(threading.Thread):
     def _get_visualizer(self):
         """Lazy initialization wizualizera."""
         if self.visualizer is None:
-            from visualizer_v59 import SoulVisualizerV59
+            from visualizer import SoulVisualizerV59
             self.visualizer = SoulVisualizerV59()
         return self.visualizer
 

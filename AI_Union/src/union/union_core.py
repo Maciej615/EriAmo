@@ -31,8 +31,8 @@ except ImportError as e:
     sys.exit(1)
 
 try:
-    from amocore_v59 import EriAmoCore, SoulStateLogger, get_music_memory
-    from soul_composer_v59 import SoulComposerV59
+    from amocore import EriAmoCore, SoulStateLogger, get_music_memory
+    from soul_composer import SoulComposerV59
     MUSIC_AVAILABLE = True
     print("[SYSTEM] 🎵 Moduł Muzyczny widoczny (SoulComposer v5.9).")
 except ImportError as e:

@@ -10,12 +10,12 @@ import shlex
 import os
 import numpy as np
 
-from amocore_v59 import EriAmoCore, SoulStateLogger, AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
-from music_analyzer_v59 import MusicAnalyzer
-from soul_composer_v59 import SoulComposerV59
-from visualizer_v59 import SoulVisualizerV59
-from data_loader_v59 import ExternalKnowledgeLoader
-from authorship_reporter_v59 import AuthorshipReporter
+from amocore import EriAmoCore, SoulStateLogger, AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
+from music_analyzer import MusicAnalyzer
+from soul_composer import SoulComposerV59
+from visualizer import SoulVisualizerV59
+from data_loader import ExternalKnowledgeLoader
+from authorship_reporter import AuthorshipReporter
 from genre_definitions import GENRE_DEFINITIONS, list_genres
 
 def print_banner():
