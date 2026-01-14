@@ -1,0 +1,231 @@
+{
+  "version": "5.0.1-fixed-learning",
+  "words": {
+    "osiagniecie": {
+      "radość": 0.9
+    },
+    "nagroda": {
+      "radość": 0.9
+    },
+    "swiatlo": {
+      "radość": 0.9
+    },
+    "slonce": {
+      "radość": 0.9
+    },
+    "muzyka": {
+      "radość": 0.9
+    },
+    "taniec": {
+      "radość": 0.9
+    },
+    "festiwal": {
+      "radość": 0.9
+    },
+    "piosenka": {
+      "radość": 0.9
+    },
+    "gra": {
+      "radość": 0.9
+    },
+    "pogrzeb": {
+      "smutek": 0.9
+    },
+    "rozstanie": {
+      "smutek": 0.9
+    },
+    "koniec": {
+      "smutek": 0.9,
+      "strach": 0.9
+    },
+    "upadek": {
+      "smutek": 0.9,
+      "strach": 0.9
+    },
+    "porazka": {
+      "smutek": 0.9
+    },
+    "puste": {
+      "smutek": 0.9
+    },
+    "cisza": {
+      "smutek": 0.9,
+      "akceptacja": 0.9
+    },
+    "samotny": {
+      "smutek": 0.9
+    },
+    "opuszczony": {
+      "smutek": 0.9
+    },
+    "deszcz": {
+      "smutek": 0.9
+    },
+    "cmentarz": {
+      "smutek": 0.9
+    },
+    "zima": {
+      "smutek": 0.9
+    },
+    "ciemnosc": {
+      "strach": 0.9
+    },
+    "noc": {
+      "strach": 0.9
+    },
+    "cien": {
+      "strach": 0.9
+    },
+    "burza": {
+      "strach": 0.9
+    },
+    "wypadek": {
+      "strach": 0.9
+    },
+    "choroba": {
+      "strach": 0.9
+    },
+    "smierc": {
+      "strach": 0.9
+    },
+    "otchlan": {
+      "strach": 0.9
+    },
+    "krzywda": {
+      "gniew": 0.9
+    },
+    "zdrada": {
+      "gniew": 0.9
+    },
+    "klamstwo": {
+      "gniew": 0.9
+    },
+    "manipulacja": {
+      "gniew": 0.9
+    },
+    "atak": {
+      "gniew": 0.9
+    },
+    "przemoc": {
+      "gniew": 0.9
+    },
+    "wojna": {
+      "gniew": 0.9
+    },
+    "bitwa": {
+      "gniew": 0.9
+    },
+    "rewolucja": {
+      "gniew": 0.9
+    },
+    "matka": {
+      "miłość": 0.9
+    },
+    "ojciec": {
+      "miłość": 0.9
+    },
+    "dom": {
+      "miłość": 0.9
+    },
+    "przytulanie": {
+      "miłość": 0.9
+    },
+    "pocalunek": {
+      "miłość": 0.9
+    },
+    "przyjaciel": {
+      "miłość": 0.9
+    },
+    "wsparcie": {
+      "miłość": 0.9
+    },
+    "opieka": {
+      "miłość": 0.9
+    },
+    "gnicie": {
+      "wstręt": 0.9
+    },
+    "rozklad": {
+      "wstręt": 0.9
+    },
+    "smrod": {
+      "wstręt": 0.9
+    },
+    "trucizna": {
+      "wstręt": 0.9
+    },
+    "zatrucie": {
+      "wstręt": 0.9
+    },
+    "zaraza": {
+      "wstręt": 0.9
+    },
+    "pluskwa": {
+      "wstręt": 0.9
+    },
+    "robak": {
+      "wstręt": 0.9
+    },
+    "pasozyt": {
+      "wstręt": 0.9
+    },
+    "plugastwo": {
+      "wstręt": 0.9
+    },
+    "zepsute": {
+      "wstręt": 0.9
+    },
+    "zgnile": {
+      "wstręt": 0.9
+    },
+    "zagadka": {
+      "zaskoczenie": 0.9
+    },
+    "magia": {
+      "zaskoczenie": 0.9
+    },
+    "nowe": {
+      "zaskoczenie": 0.9
+    },
+    "nieznane": {
+      "zaskoczenie": 0.9
+    },
+    "eksperyment": {
+      "zaskoczenie": 0.9
+    },
+    "badanie": {
+      "zaskoczenie": 0.9
+    },
+    "przygoda": {
+      "zaskoczenie": 0.9
+    },
+    "eksploracja": {
+      "zaskoczenie": 0.9
+    },
+    "medytacja": {
+      "akceptacja": 0.9
+    },
+    "natura": {
+      "akceptacja": 0.9
+    },
+    "las": {
+      "akceptacja": 0.9
+    },
+    "gory": {
+      "akceptacja": 0.9
+    },
+    "morze": {
+      "akceptacja": 0.9
+    },
+    "pokoj": {
+      "akceptacja": 0.9
+    },
+    "odpoczynek": {
+      "akceptacja": 0.9
+    },
+    "sen": {
+      "akceptacja": 0.9
+    }
+  },
+  "total_learned": 96
+}

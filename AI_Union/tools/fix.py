@@ -37,8 +37,12 @@ print(f"{Colors.MAGENTA}{'='*60}{Colors.RESET}\n")
 
 print(f"{Colors.YELLOW}[1/5] Szukanie właściwego eriamo.soul...{Colors.RESET}")
 
+# Fix: start searching from project root
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+
 soul_files = []
-for root, dirs, files in os.walk('.'):
+for root, dirs, files in os.walk(project_root):
     if '.git' in root or 'backup' in root.lower() or '__pycache__' in root:
         continue
     
@@ -153,7 +157,11 @@ print(f"  {Colors.GREEN}✓ Zapisano (backup: {backup.name}){Colors.RESET}")
 print(f"\n{Colors.YELLOW}[3/5] Obniżanie threshold...{Colors.RESET}")
 
 aii_path = None
-for p in ['src/language/aii.py', './aii.py']:
+aii_candidates = [
+    os.path.join(project_root, 'src', 'language', 'aii.py'),
+    os.path.join(project_root, 'aii.py')
+]
+for p in aii_candidates:
     if Path(p).exists():
         aii_path = p
         break

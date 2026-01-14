@@ -8,7 +8,7 @@ import os
 import base64
 from io import BytesIO
 from datetime import datetime
-from amocore_v59 import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
+from amocore import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
 
 try:
     import plotly.graph_objects as go

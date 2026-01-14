@@ -12,7 +12,7 @@ import random
 import datetime
 import os
 import numpy as np
-from amocore_v59 import AXES_LIST, interpret_improv_for_composition, get_music_memory
+from amocore import AXES_LIST, interpret_improv_for_composition, get_music_memory
 from genre_definitions import GENRE_DEFINITIONS
 
 # Obsługa Music21 (Nuty)
@@ -867,7 +867,7 @@ class SoulComposerV59:
         else:
             # Oblicz ciekawość (jeśli dostępna)
             try:
-                from amocore_v59 import get_curiosity_engine
+                from amocore import get_curiosity_engine
                 engine = get_curiosity_engine()
                 curiosity = engine.compute_curiosity(
                     metrics.get('kreacja', 0),

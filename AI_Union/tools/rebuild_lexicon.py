@@ -25,7 +25,16 @@ print(f"{Colors.CYAN}{'='*60}{Colors.RESET}\n")
 
 # Znajdź lexicon.soul
 lexicon_path = None
-for p in ['src/language/lexicon.soul', 'lexicon.soul', 'data/lexicon.soul']:
+# Fix paths relative to project root
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+
+candidates = [
+    os.path.join(project_root, 'src', 'language', 'lexicon.soul'),
+    os.path.join(project_root, 'lexicon.soul'),
+    os.path.join(project_root, 'data', 'lexicon.soul')
+]
+for p in candidates:
     if Path(p).exists():
         lexicon_path = p
         break
