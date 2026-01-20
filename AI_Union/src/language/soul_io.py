@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-soul_io.py
+soul_io.py v6.0.1-Union Fix
 Lokalizacja: /eriamo-union/src/language/soul_io.py
 """
 import json
@@ -12,10 +12,16 @@ class SoulIO:
     def __init__(self):
         self.filepath = Config.SOUL_FILE
 
-    def load_soul_stream(self, d_map_ref):
-        """Wczytuje definicje linia po linii."""
+    def load_stream(self):
+        """
+        Wczytuje definicje i ZWRACA słownik (dla AII v6.0.0).
+        Nie wymaga argumentu d_map_ref.
+        """
+        loaded_data = {} # Tworzymy nowy, lokalny słownik
+        
         if not os.path.exists(self.filepath):
-            return 
+            return loaded_data
+            
         count = 0
         try:
             with open(self.filepath, 'r', encoding='utf-8') as f:
@@ -24,26 +30,31 @@ class SoulIO:
                     if not line: continue
                     try:
                         data = json.loads(line)
-                        if data.get('_type') == '@MEMORY':
-                            d_map_ref[data['id']] = data
-                            count += 1
+                        # Sprawdzamy typ rekordu (kompatybilność wsteczna i nowa)
+                        if data.get('_type') in ['@MEMORY', 'memory']:
+                            # Używamy ID jako klucza
+                            rec_id = data.get('id')
+                            if rec_id:
+                                loaded_data[rec_id] = data
+                                count += 1
                     except json.JSONDecodeError:
                         continue
             print(f"{Colors.GREEN}[SoulIO] Wczytano strumieniowo {count} obiektów.{Colors.RESET}")
         except Exception as e:
-            print(f"{Colors.RED}[SoulIO] Błąd krytyczny: {e}{Colors.RESET}")
+            print(f"{Colors.RED}[SoulIO] Błąd odczytu: {e}{Colors.RESET}")
+            
+        return loaded_data
 
-    def save_stream(self, d_map_ref):
-        """Metoda, której brakowało! Zapisuje duszę."""
+    def save_stream(self, data_to_save):
+        """Metoda zapisuje duszę (nadal przyjmuje dane jako argument)."""
         try:
-            # Używamy trybu 'w' (nadpisz), bo zrzucamy całą pamięć z RAM
             with open(self.filepath, 'w', encoding='utf-8') as f:
-                # Meta
-                meta = {"_type": "@META", "timestamp": time.time(), "count": len(d_map_ref)}
+                # Meta nagłówek
+                meta = {"_type": "@META", "timestamp": time.time(), "count": len(data_to_save)}
                 f.write(json.dumps(meta, ensure_ascii=False) + "\n")
                 
-                # Dane
-                for key, val in d_map_ref.items():
+                # Zapis właściwy
+                for key, val in data_to_save.items():
                     f.write(json.dumps(val, ensure_ascii=False) + "\n")
         except Exception as e:
             print(f"{Colors.RED}[SoulIO] Błąd zapisu: {e}{Colors.RESET}")
