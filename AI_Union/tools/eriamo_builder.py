@@ -857,8 +857,7 @@ def main():
     # Szukaj plików genesis w różnych lokalizacjach
     possible_genesis_dirs = [
         current_dir,
-        os.path.join(current_dir, '..', 'src', 'language'),
-        os.path.join(current_dir, 'src', 'language'),
+        os.path.join(current_dir, '..'), # Root of AI_Union
         '/mnt/user-data/uploads',  # Dla środowiska Claude
     ]
     

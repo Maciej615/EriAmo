@@ -158,7 +158,6 @@ print(f"\n{Colors.YELLOW}[3/5] Obniżanie threshold...{Colors.RESET}")
 
 aii_path = None
 aii_candidates = [
-    os.path.join(project_root, 'src', 'language', 'aii.py'),
     os.path.join(project_root, 'aii.py')
 ]
 for p in aii_candidates:

@@ -9,8 +9,8 @@ import sys
 
 # Ustawienie ścieżki, żeby widzieć moduły obok
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# Fix: point to src/language
-lang_dir = os.path.abspath(os.path.join(current_dir, '..', 'src', 'language'))
+# Fix: point to root
+lang_dir = os.path.abspath(os.path.join(current_dir, '..'))
 sys.path.append(lang_dir)
 
 try:
