@@ -1,16 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-main.py PATCH - Dodaje graceful shutdown dla zapisywania unified_memory
 
-INSTRUKCJA:
-1. Znajdź swój main.py
-2. Dodaj import signal na początku
-3. Dodaj signal handler przed główną pętlą
-4. Zmień pętlę input na try/except KeyboardInterrupt
-
-LUB użyj tego pliku jako nowy main.py
-"""
 
 import signal
 import sys
