@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-union_core_v4.py v1.7.0-Focus
+union_core.py v1.7.1-DictFix
 EriAmo Union - Complete AGI System
-Lokalizacja: /eriamo-union/src/union/union_core_v4.py
+Lokalizacja: /eriamo-union/src/union/union_core.py
 
-ZMIANY v1.7.0:
-- FOCUS: Metoda process_input() aktywuje tryb skupienia w Agencji.
-- FIX: SafeShutdown z wersji 1.6.0.
+ZMIANY v1.7.1:
+- FIX: Obsługa słownika emocji (AII v6.0+) w process_input (naprawa KeyError: 0).
+- FIX: Zwiększona odporność na typy danych (list vs dict) przy Boostach emocjonalnych.
 """
 
 import sys
@@ -48,7 +48,7 @@ except ImportError:
 
 class EriAmoUnion:
     
-    VERSION = "1.7.0-Focus"
+    VERSION = "1.7.1-DictFix"
     
     def __init__(self, verbose: bool = True, use_unified_memory: bool = True):
         self.verbose = verbose
@@ -114,14 +114,29 @@ class EriAmoUnion:
             if self.language:
                 if hasattr(self.language, 'interact'): self.language.interact(text)
                 elif hasattr(self.language, 'prompt'): self.language.prompt(text)
-                if hasattr(self.language, 'get_emotions'): emotions = self.language.get_emotions()
+                
+                # Pobranie emocji (może być dict lub list)
+                if hasattr(self.language, 'get_emotions'): 
+                    emotions = self.language.get_emotions()
 
-            # Percepcja
+            # Percepcja (Analiza sentymentu i Boost)
             emo_boost = self._analyze_emotional_intensity(text)
             if emo_boost > 0.0:
                 print(f"[UNION] ❤️ Wykryto emocje (Boost: +{emo_boost:.2f})")
-                emotions[0] = min(1.0, emotions[0] + emo_boost)
-                emotions[7] = min(1.0, emotions[7] + emo_boost)
+                
+                # --- FIX v1.7.1: Obsługa obu formatów danych (Dict i List) ---
+                if isinstance(emotions, dict):
+                    # Wzmacniamy 'radość' i 'akceptacja' (odpowiedniki indeksów 0 i 7)
+                    if 'radość' in emotions:
+                        emotions['radość'] = min(1.0, emotions.get('radość', 0.0) + emo_boost)
+                    if 'akceptacja' in emotions:
+                        emotions['akceptacja'] = min(1.0, emotions.get('akceptacja', 0.0) + emo_boost)
+                
+                elif isinstance(emotions, list) and len(emotions) >= 8:
+                    # Klasyczna obsługa indeksowa
+                    emotions[0] = min(1.0, emotions[0] + emo_boost)
+                    emotions[7] = min(1.0, emotions[7] + emo_boost)
+                # -----------------------------------------------------------
 
             # Złożoność
             complexity_stimulus = self._analyze_text_complexity(text)
