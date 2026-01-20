@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# explorer.py - Autonomous Filesystem Explorer dla EriAmo
+# explorer.py v8.0.1 - Autonomous Filesystem Explorer dla EriAmo
 """
 Moduł eksploracji świata fizycznego przez autonomiczne odkrywanie.
 System SAM szuka sensorów w /sys/, /proc/ i tworzy własne parsery.
@@ -9,8 +9,9 @@ import os
 import re
 import time
 import json
+import threading
 
-# Definicja kolorów lokalnie, by nie zgubić zależności
+# Definicja kolorów
 class Colors:
     CYAN = '\033[96m'
     GREEN = '\033[92m'
@@ -48,8 +49,15 @@ class WorldExplorer:
         self.sensors = {}
         self.parsers = {}
         
-        # Próba załadowania poprzedniej wiedzy
+        # 1. Próba załadowania mapy z dysku
         self.load_discoveries()
+        
+        # 2. AUTO-START: Jeśli mapa jest pusta, skanuj natychmiast!
+        if not self.sensors:
+            print(f"{Colors.YELLOW}[EXPLORER] Brak mapy sprzętowej. Rozpoczynam wstępne skanowanie...{Colors.RESET}")
+            self.explore_safe_zones()
+        else:
+            print(f"{Colors.GREEN}[EXPLORER] Wczytano mapę: {len(self.sensors)} zakończeń nerwowych.{Colors.RESET}")
 
     def explore_safe_zones(self):
         """Główny skan terytorium."""
@@ -57,7 +65,8 @@ class WorldExplorer:
         discoveries_count = 0
         
         for zone in self.SAFE_ZONES:
-            if not os.path.exists(zone): continue
+            if not os.path.exists(zone): 
+                continue
             
             try:
                 if os.path.isfile(zone):
@@ -67,11 +76,18 @@ class WorldExplorer:
                         for fname in files:
                             filepath = os.path.join(root, fname)
                             if self._investigate_file(filepath): discoveries_count += 1
+                        # Zabezpieczenie przed zbyt głębokim wejściem
                         if root.count(os.sep) - zone.count(os.sep) > 2: break
-            except Exception: continue
+            except Exception as e: 
+                # Ciche ignorowanie błędów dostępu
+                continue
         
-        print(f"{Colors.GREEN}[EXPLORER] Zmapowano {discoveries_count} nowych zakończeń nerwowych.{Colors.RESET}")
-        self.save_discoveries() # Zapisz wiedzę
+        if discoveries_count > 0:
+            print(f"{Colors.GREEN}[EXPLORER] Sukces: Zmapowano {discoveries_count} nowych sensorów.{Colors.RESET}")
+            self.save_discoveries()
+        else:
+            print(f"{Colors.RED}[EXPLORER] Nie znaleziono żadnych dostępnych sensorów w standardowych ścieżkach.{Colors.RESET}")
+            
         return self.discoveries
     
     def _investigate_file(self, filepath):
@@ -85,6 +101,7 @@ class WorldExplorer:
         if not interesting_type: return False
         
         try:
+            # Sprawdź czy plik jest czytelny i zawiera liczbę
             with open(filepath, 'r') as f: content = f.read(256).strip()
             if re.match(r'^\d+$', content):
                 return self._discover_sensor(filepath, content, interesting_type)
@@ -97,7 +114,7 @@ class WorldExplorer:
         is_volt = 'in' in filepath
         is_fan = 'fan' in filepath
         
-        # GENIALNE: System pisze własny kod parsera!
+        # Generowanie kodu parsera
         parser_code = self._generate_sensor_parser(filepath, is_temp, is_volt, is_fan)
         
         discovery = {
@@ -114,12 +131,14 @@ class WorldExplorer:
         self.sensors[sensor_id] = discovery
         self.discoveries.append(discovery)
         
-        # Uczenie leksykonu (jeśli podłączony)
-        if self.aii: self._teach_from_discovery(discovery)
+        # Uczenie leksykonu (Asocjacja: Gorąco -> Strach)
+        if self.aii and hasattr(self.aii, 'lexicon'):
+             self._teach_from_discovery(discovery)
         
         return True
     
     def _generate_sensor_parser(self, filepath, is_temp, is_volt, is_fan):
+        # Linuxowe sensory temperatury podają wartość w millistopniach (np. 45000 = 45st)
         conversion = "/ 1000.0" if (is_temp or is_volt) else ""
         return f"""
 def read_sensor():
@@ -131,11 +150,15 @@ def read_sensor():
 """
     
     def _teach_from_discovery(self, discovery):
-        if hasattr(self.aii, 'lexicon'):
+        try:
             if discovery['is_temperature']:
+                # Używamy formatu v8.0 (vector boost zamiast starego correction)
+                # Ale lexicon.learn_from_correction jest bezpieczny
                 self.aii.lexicon.learn_from_correction('gorąco', 'strach', 0.1)
+                self.aii.lexicon.learn_from_correction('ogień', 'chaos', 0.1)
             if discovery['is_fan']:
-                self.aii.lexicon.learn_from_correction('wiatrak', 'radość', 0.1)
+                self.aii.lexicon.learn_from_correction('szum', 'przestrzeń', 0.1)
+        except: pass
 
     def get_live_readings(self):
         """Uruchamia wygenerowane parsery i zwraca dane."""
@@ -147,21 +170,25 @@ def read_sensor():
                 exec(sensor['parser'], {}, local_scope)
                 value = local_scope['read_sensor']()
                 
+                # Odsiewamy błędne odczyty (np. temp 0.0 lub fan 0)
+                if value == 0.0 and sensor['is_temperature']: continue
+
                 key = 'unknown'
-                if sensor['is_temperature']: key = 'ext_temp'
+                if sensor['is_temperature']: key = 'temp' # uproszczona nazwa
                 elif sensor['is_fan']: key = 'fan_rpm'
-                elif sensor['is_voltage']: key = 'voltage'
+                elif sensor['is_voltage']: key = 'volts'
                 
-                # Dodajemy ID żeby uniknąć nadpisania
                 readings[f"{key}_{sensor_id}"] = value
             except Exception: pass
         return readings
 
     def save_discoveries(self, filepath='data/hardware_map.json'):
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        data = {'sensors': self.sensors, 'discoveries': self.discoveries}
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        try:
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            data = {'sensors': self.sensors, 'discoveries': self.discoveries}
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except: pass
 
     def load_discoveries(self, filepath='data/hardware_map.json'):
         if os.path.exists(filepath):
