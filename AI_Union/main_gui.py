@@ -5,6 +5,7 @@ EriAmo v5.9 - Interfejs Graficzny
 - Wizualizacja wygaszania emocji
 - Rozróżnienie osi efemerycznych i trwałych
 - Bezpieczna obsługa wątków
+- Dostosowany do płaskiej struktury katalogów (AI_Union root)
 """
 import customtkinter as ctk
 import threading

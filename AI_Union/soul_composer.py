@@ -884,7 +884,7 @@ class SoulComposerV59:
         else:
             # Oblicz ciekawość (jeśli dostępna)
             try:
-                from amocore_v59 import get_curiosity_engine
+                from amocore import get_curiosity_engine
                 engine = get_curiosity_engine()
                 curiosity = engine.compute_curiosity(
                     metrics.get('kreacja', 0),
