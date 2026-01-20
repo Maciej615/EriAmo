@@ -1,0 +1,22 @@
+Gatunek: MENUET
+Tonacja: RIEPEL-dur
+Instrument: Auto
+Data: 2026-01-19T09:13:57.553606
+
+STRUKTURA (Joseph Riepel (teoretyk) (Styl Proceduralny)):
+------------------------------
+  Część A (Satz): Vordersatz -> Nachsatz
+  Część B (Fortspinnung): Modulacja i powrót
+  Forma: :||: A :||: B :||
+
+STAN DUSZY:
+------------------------------
+  Logika      : +136.50
+  Emocje      : +60.00
+  Affections  : +115.50
+  Wiedza      : +158.00
+  Czas        : +81.00
+  Kreacja     : +289.00
+  Byt         :  +0.00
+  Przestrzen  : +75.00
+  Improwizacja:  +0.00

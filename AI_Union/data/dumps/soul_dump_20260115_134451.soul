@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "version": "5.9.4",
+    "created_at": "2026-01-15T13:44:51.664671",
+    "integrity_hash": "0b7b082265ea2ef82aa7f12bec04443053a454833becad05d47b851f77b0bd6c"
+  },
+  "soul_vector": {
+    "logika": 83.0,
+    "emocje": 55.0,
+    "affections": 81.0,
+    "wiedza": 95.0,
+    "czas": 57.0,
+    "kreacja": 217.0,
+    "byt": 0.0,
+    "przestrzen": 70.0,
+    "improwizacja": 0.0
+  },
+  "ethics_framework": {
+    "integrity": 1.0,
+    "respect": 1.0,
+    "authenticity": 1.0,
+    "harmony": 1.0
+  }
+}

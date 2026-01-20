@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-# lexicon.py v5.0 - EMOTIONAL SEED (Rebuild for Feeling-Based Memory)
+# lexicon.py v6.0.0-Union Compatible
+# Zaktualizowano dla EriAmo Union: Obsługa vector_override
+
 import json
 import os
 import numpy as np
@@ -70,17 +72,18 @@ class EvolvingLexicon:
         ]
     }
     
-    # Progi uczenia - zoptymalizowane dla lepszego uczenia
-    PRÓG_AKTYWACJI = 0.15      # Obniżony z 0.3 - słabsze sygnały są OK
-    PRÓG_UCZENIA = 0.20        # Obniżony z 0.3 - łatwiej się uczy
+    # Progi uczenia
+    PRÓG_AKTYWACJI = 0.15
+    PRÓG_UCZENIA = 0.20
     WAGA_SEED = 1.0
-    WAGA_NAUCZONE = 0.8        # Zwiększony z 0.5 - mocniejsze uczenie
+    WAGA_NAUCZONE = 0.8
     DECAY_RATE = 0.99
     MIN_WORD_LENGTH = 3
-    REINFORCEMENT_RATE = 0.08  # Zwiększony z 0.05 - szybsze wzmacnianie
+    REINFORCEMENT_RATE = 0.08
     
     def __init__(self, lexicon_file="lexicon.soul"):
         self.lexicon_file = lexicon_file
+        # Kolejność osi musi być zgodna z AII.AXES_ORDER
         self.axes = ["radość", "smutek", "strach", "gniew", "miłość", "wstręt", "zaskoczenie", "akceptacja"]
         self.words = {}
         self.total_learned = 0
@@ -90,7 +93,9 @@ class EvolvingLexicon:
     
     def _normalize(self, word):
         word = word.lower().strip()
-        word = unidecode.unidecode(word)
+        try:
+            word = unidecode.unidecode(word)
+        except: pass # Fallback if unidecode fails or not present
         word = re.sub(r'[^\w]', '', word)
         return word
     
@@ -137,7 +142,6 @@ class EvolvingLexicon:
             dominant_idx = np.argmax(total_vec)
             dominant_sector = self.axes[dominant_idx]
             
-            # Wzmocnij znane słowa w dominującym sektorze
             if enable_reinforcement and dominant_sector:
                 for word in used_known_words:
                     self._reinforce_word(word, dominant_sector)
@@ -145,17 +149,12 @@ class EvolvingLexicon:
         return total_vec, dominant_sector, unknown_words
     
     def _reinforce_word(self, word, sector):
-        """Wzmacnia połączenie słowo-sektor przy każdym użyciu."""
         if word not in self.words:
             return
         current = self.words[word].get(sector, 0.0)
         self.words[word][sector] = min(1.0, current + self.REINFORCEMENT_RATE)
     
     def learn_from_context(self, unknown_words, context_vector, confidence):
-        """
-        Uczy nowe słowa na podstawie PEŁNEGO wektora kontekstu emocjonalnego.
-        Słowa dziedziczą emocjonalne zabarwienie z kontekstu.
-        """
         if confidence < self.PRÓG_UCZENIA:
             return []
         
@@ -167,7 +166,6 @@ class EvolvingLexicon:
             if word not in self.words:
                 self.words[word] = {}
             
-            # Przypisz WSZYSTKIE wymiary emocjonalne powyżej progu
             for i, axis in enumerate(self.axes):
                 dim_strength = context_vector[i]
                 if dim_strength > self.PRÓG_AKTYWACJI:
@@ -175,7 +173,6 @@ class EvolvingLexicon:
                     current = self.words[word].get(axis, 0.0)
                     self.words[word][axis] = min(1.0, current + initial_weight)
             
-            # Jeśli nauczono chociaż jeden wymiar
             if any(v > 0 for v in self.words[word].values()):
                 learned.append((word, self.words[word].copy()))
                 self.total_learned += 1
@@ -183,21 +180,34 @@ class EvolvingLexicon:
         self.last_learned = learned
         return learned
     
-    def learn_from_correction(self, word, correct_sector, strength=0.7):
-        """Manualna korekta - zwiększa wagę emocjonalną w danym wymiarze."""
+    def learn_from_correction(self, word, correct_sector, strength=0.7, vector_override=None):
+        """
+        Uczy słowa. Obsługuje ręczną korektę LUB bezpośrednie nadpisanie wektora (dla AII v6.0).
+        """
         norm_word = self._normalize(word)
         if norm_word not in self.words:
             self.words[norm_word] = {}
+            
+        # --- FIX: Obsługa vector_override dla AII v6.0 ---
+        if vector_override is not None:
+            # Przepisujemy wartości z wektora do słownika osi
+            for i, axis in enumerate(self.axes):
+                if i < len(vector_override):
+                    val = float(vector_override[i])
+                    if val > 0:
+                        self.words[norm_word][axis] = val
+            self.total_learned += 1
+            return True
+        # -------------------------------------------------
+
         current = self.words[norm_word].get(correct_sector, 0.0)
         self.words[norm_word][correct_sector] = min(1.0, current + strength)
         self.total_learned += 1
         return True
     
     def decay_unused(self):
-        """Zanik nieużywanych słów (oprócz SEED)."""
         words_to_remove = []
         for word, sectors in self.words.items():
-            # Nie dotykaj seeda
             is_seed = False
             for s_words in self.SEED_LEXICON.values():
                 if word in [self._normalize(w) for w in s_words]:
@@ -256,7 +266,7 @@ class EvolvingLexicon:
                 learned_only[w] = secs
         
         data = {
-            "version": "5.0.1-fixed-learning",
+            "version": "6.0.0-Union-Compatible",
             "words": learned_only,
             "total_learned": self.total_learned
         }

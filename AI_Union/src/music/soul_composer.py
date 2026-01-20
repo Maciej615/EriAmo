@@ -1,12 +1,13 @@
-# soul_composer_v59.py
+# soul_composer.py
 # -*- coding: utf-8 -*-
 """
-Kompozytor Duszowy EriAmo v5.9.2 [CLEAN & STABLE + MEMORY]
+Kompozytor Duszowy EriAmo v5.9.3 [FULL MOZART DIVERSITY]
 - Polifonia i Inteligentny Rytm
 - Obsługa Instrumentów i Audio (FluidSynth)
 - NOWE: Oś IMPROWIZACJA wpływa na swobodę kompozycji
 - NOWE: SYSTEM SNU - kompozycja czerpie z pamięci skonsolidowanej
 - Menuet według zasad Josepha Riepela (1752)
+- FIX: Pełna różnorodność Mozarta (Musikalisches Würfelspiel) - 176 unikalnych taktów
 """
 import random
 import datetime
@@ -775,77 +776,93 @@ class SoulComposerV59:
     def _generate_dice_measure(self, measure_id: int, scale: list, metrics: dict, 
                                measure_idx: int, section: str) -> list:
         """
-        Generuje pojedynczy takt w stylu mozartowskiej gry w kości.
+        Generuje unikalny takt na podstawie jego ID z macierzy Mozarta (K.516f).
         
-        measure_id determinuje "charakter" taktu (w oryginale to były zapisane takty).
-        My generujemy je algorytmicznie, ale measure_id wpływa na wybór wzorca.
+        Używa measure_id (np. 96, 22, 141...) jako SEED (ziarna) dla generatora losowego.
+        Dzięki temu każda liczba z tabeli odpowiada konkretnemu, niezmiennemu taktowi muzycznemu.
+        Daje to bibliotekę 176 unikalnych taktów, które są dobierane przez rzut kośćmi.
         """
-        memory_style = metrics.get('memory_style', {})
-        improv = metrics.get('improv_params', {})
-        freedom = improv.get('freedom_level', 0.5)
+        # === KLUCZ DO RÓŻNORODNOŚCI ===
+        # Inicjalizujemy lokalny generator liczbą z tabeli (np. 96).
+        # Takt nr 96 zawsze będzie brzmiał tak samo - to jak wybranie strony z książki.
+        rng = random.Random(measure_id)
         
-        # measure_id wpływa na charakter taktu
-        pattern_type = measure_id % 8  # 8 typów wzorców
-        
-        # Typowe rytmy mozartowskie dla menueta
+        # 1. BOGACTWO RYTMICZNE (zgodne z klasycyzmem)
         rhythms = [
-            [1.0, 1.0, 1.0],           # 0: równe ćwierćnuty
-            [2.0, 1.0],                 # 1: półnuta + ćwierćnuta
-            [1.0, 2.0],                 # 2: ćwierćnuta + półnuta
-            [1.0, 0.5, 0.5, 1.0],       # 3: ćwierć + dwie ósemki + ćwierć
-            [0.5, 0.5, 0.5, 0.5, 1.0],  # 4: cztery ósemki + ćwierć
-            [1.0, 0.5, 0.5, 0.5, 0.5],  # 5: ćwierć + cztery ósemki
-            [1.5, 0.5, 1.0],            # 6: punktowana (bardziej händlowska)
-            [0.5, 0.5, 1.0, 1.0],       # 7: dwie ósemki + dwie ćwierćnuty
+            [1.0, 1.0, 1.0],            # Ćwierćnuty (kroczące)
+            [2.0, 1.0],                 # Półnuta + ćwierć (kadencyjne)
+            [1.0, 2.0],                 # Ćwierć + półnuta
+            [1.0, 0.5, 0.5, 1.0],       # Ozdobnik w środku
+            [0.5, 0.5, 1.0, 1.0],       # Rozbieg (anapest)
+            [1.5, 0.5, 1.0],            # Punktowany (dostojny)
+            [1.0, 1.5, 0.5],            # Synkopa galant
+            [0.5, 0.5, 0.5, 0.5, 1.0],  # Bieg ósemkowy
+            [1.0, 0.5, 0.5, 0.5, 0.5],  # Opadanie
+            [0.75, 0.25, 1.0, 1.0],     # Z szesnastką (ozdobne)
+            [3.0],                      # Cała nuta (rzadkie, dla kontrastu)
+            [0.5, 1.0, 1.5]             # Sarabanda style (akcent na 2)
         ]
         
-        rhythm = rhythms[pattern_type]
+        # Wybór rytmu jest deterministyczny dla danego measure_id
+        rhythm = rng.choice(rhythms)
         
-        # Wzorce melodyczne zależne od pozycji w formie
-        if section == 'A':
-            if measure_idx == 0:
-                # Początek - akord toniczny
-                start_idx = random.choice([0, 2, 4])  # I, III, V stopień
-            elif measure_idx == 3 or measure_idx == 7:
-                # Kadencja - kieruj do toniki lub dominanty
-                start_idx = random.choice([0, 4])
-            else:
-                start_idx = random.randint(0, len(scale) // 2)
-        else:  # B
-            if measure_idx == 0:
-                # Początek B - często od dominanty
-                start_idx = 4  # V stopień
-            elif measure_idx == 7:
-                # Zakończenie - tonika
-                start_idx = 0
-            else:
-                start_idx = random.randint(0, len(scale) // 2)
+        # 2. DETERMINISTYCZNY KONTUR MELODII
+        # Każdy numer taktu ma swój "kształt"
+        contour = rng.choice(['ascending', 'descending', 'arch', 'bowl', 'wave', 'static', 'leap_up', 'leap_down'])
         
-        # Generuj nuty
+        # Punkt startowy w skali (zależny od harmonii taktu)
+        # W sekcji A (Satz) i B (Fortspinnung) harmonie są przewidywalne na mocnych częściach
+        if measure_idx in [0, 4, 8]: # Początki fraz - I stopień
+            start_offset = rng.choice([0, 2, 4]) # I, III, V
+        elif measure_idx in [3, 7, 11, 15]: # Kadencje
+            # Kadencje częściej celują w V lub I
+            start_offset = rng.choice([4, 6, 0]) # V, VII, I
+        else:
+            start_offset = rng.randint(0, 7)
+            
+        # Znajdź indeks startowy w podanej skali
+        base_idx = len(scale) // 2 
+        # Przesunięcie startowe
+        current_idx = base_idx + (start_offset if start_offset < 4 else start_offset - 7)
+        
         notes = []
-        current_idx = start_idx
         
         for i, dur in enumerate(rhythm):
-            # Dynamika
-            dyn = 'mf' if i == 0 else 'mp'
+            # Dynamika przypisana do taktu (nie losowa przy każdym odtworzeniu!)
+            dyn = 'mf'
+            if i == 0:
+                dyn = rng.choice(['mf', 'f', 'mp'])
             
-            # Pitch
-            pitch = scale[min(current_idx, len(scale) - 1)]
+            # Pobierz wysokość
+            pitch_idx = min(max(0, current_idx), len(scale)-1)
+            pitch = scale[pitch_idx]
+            
+            # MOZARTOWSKIE OZDOBNIKI (Przednutki)
+            # Jeśli ten konkretny takt (measure_id) ma mieć ozdobnik, będzie go miał zawsze
+            if rng.random() < 0.18 and dur >= 1.0:
+                grace_dir = rng.choice([-1, 1])
+                grace_pitch = scale[min(max(0, pitch_idx + grace_dir), len(scale)-1)]
+                notes.append({'type': 'note', 'pitch': grace_pitch, 'duration': 0.0, 'dynamic': 'mp', 'grace': True})
+            
             notes.append({'type': 'note', 'pitch': pitch, 'duration': dur, 'dynamic': dyn})
             
-            # Ruch melodyczny (typowy dla Mozarta - głównie krokowy z okazjonalnymi skokami)
-            if random.random() < 0.7:  # 70% kroki
-                step = random.choice([-1, 1, 1, -1, 0])
-            else:  # 30% skoki
-                step = random.choice([-2, 2, -3, 3])
+            # Ruch melodyczny wg konturu (również stały dla danego ID)
+            step = 0
+            if contour == 'ascending': step = rng.choice([1, 1, 2])
+            elif contour == 'descending': step = rng.choice([-1, -1, -2])
+            elif contour == 'arch': step = 1 if i < len(rhythm)/2 else -1
+            elif contour == 'bowl': step = -1 if i < len(rhythm)/2 else 1
+            elif contour == 'leap_up': step = 4 if i == 0 else -1
+            elif contour == 'leap_down': step = -4 if i == 0 else 1
+            elif contour == 'wave': step = 1 if i % 2 == 0 else -1
+            elif contour == 'static': step = rng.choice([0, 0, 1, -1])
             
-            # Pamięć może zwiększyć skoki
-            if memory_style.get('leap_ratio', 0.3) > 0.5:
-                if random.random() < 0.3:
-                    step = random.choice([-3, -2, 2, 3, 4])
+            # Mała wariacja wewnątrz taktu (nadal deterministyczna z rng)
+            if rng.random() < 0.25:
+                step += rng.choice([-1, 1])
+                
+            current_idx += step
             
-            current_idx = max(0, min(len(scale) - 1, current_idx + step))
-        
         return notes
     
     def _select_menuet_style(self, metrics: dict, forced_style: str = None) -> dict:
@@ -867,7 +884,7 @@ class SoulComposerV59:
         else:
             # Oblicz ciekawość (jeśli dostępna)
             try:
-                from amocore import get_curiosity_engine
+                from amocore_v59 import get_curiosity_engine
                 engine = get_curiosity_engine()
                 curiosity = engine.compute_curiosity(
                     metrics.get('kreacja', 0),
@@ -2076,23 +2093,51 @@ class SoulComposerV59:
         elif genre_name == "ROCK_AND_ROLL":
             data = self._generate_rock_polyphonic()
         elif genre_name == "MENUET":
-            # Parsuj tonikę
-            tonic_midi = 60  # Domyślnie C
-            if tonic:
-                tonic_midi = self.TONIC_MAP.get(tonic.upper().strip(), 60)
-            # NOWE: Domyślnie używaj kości Mozarta!
-            # Możesz wymusić Riepela przez tonic="RIEPEL"
-            if tonic and tonic.upper() == "RIEPEL":
-                data = self._generate_menuet_polyphonic(tonic=60)
-            else:
-                data = self._generate_menuet_mozart_dice(tonic=tonic_midi)
-        elif genre_name == "LAMENT":
-            data = self._generate_lament_polyphonic()
-        elif genre_name == "AMBIENT":
-            data = self._generate_ambient_polyphonic()
-        else:
-            data = self._generate_simple_poly(genre_name)
+            # 1. Parsowanie Tonacji
+            tonic_midi = 60  # Domyślnie C (60)
+            style_override = None
 
+            # Sprawdź, czy argument 'tonic' to nazwa stylu (np. "BACH")
+            if tonic and tonic.upper() in ["RIEPEL", "MOZART", "BACH", "HAYDN", "HANDEL", "DICE"]:
+                style_override = tonic.upper()
+                tonic_midi = 60 # Reset tonacji jeśli podano styl
+            elif tonic:
+                # Jeśli to normalna tonacja (np. "G", "D#")
+                tonic_midi = self.TONIC_MAP.get(tonic.upper().strip(), 60)
+
+            # 2. Logika Wyboru (Różnorodność!)
+            if style_override == "RIEPEL":
+                 # Wymuszony Riepel
+                 data = self._generate_menuet_polyphonic(tonic=tonic_midi, master_style="RIEPEL")
+            elif style_override == "DICE" or style_override == "MOZART":
+                 # Wymuszony Mozart Dice
+                 data = self._generate_menuet_mozart_dice(tonic=tonic_midi)
+            elif style_override:
+                 # Inny mistrz (Bach, Haydn, Handel)
+                 data = self._generate_menuet_polyphonic(tonic=tonic_midi, master_style=style_override)
+            else:
+                # BRAK ARGUMENTÓW -> PEŁNA LOSOWOŚĆ
+                # System sam decyduje, w jakim stylu skomponować
+                rng = random.random()
+                
+                if rng < 0.65:
+                    # 40% szans na Grę w Kości Mozarta (Unikalne takty)
+                    print(f"[Composer] Losuję: Mozart Musikalisches Würfelspiel")
+                    data = self._generate_menuet_mozart_dice(tonic=tonic_midi)
+                elif rng < 0.85:
+                    # 30% szans na inny styl historyczny (Bach, Handel, Haydn)
+                    # None = _generate_menuet_polyphonic sam wylosuje styl na podstawie ciekawości
+                    print(f"[Composer] Losuję: Styl Historyczny (Auto)")
+                    data = self._generate_menuet_polyphonic(tonic=tonic_midi, master_style=None)
+                else:
+                    # 15% szans na Riepela (Klasyczna struktura)
+                    print(f"[Composer] Losuję: Klasyczny Riepel")
+                    data = self._generate_menuet_polyphonic(tonic=tonic_midi, master_style="RIEPEL")
+                
+    # =================================================================
+        # TU ZACZYNA SIĘ BRAKUJĄCY KOD (TWORZENIE PLIKÓW I RAPORTU)
+        # =================================================================
+        
         score = self._create_music21_score(data, genre_name, instrument_override)
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2110,6 +2155,7 @@ class SoulComposerV59:
                 audio_paths = self._render_audio(paths['midi'])
                 paths.update(audio_paths)
 
+        # --- ZAPIS PLIKU TEKSTOWEGO Z POPRAWNYM OPISEM ---
         paths['txt'] = f"{base}.txt"
         with open(paths['txt'], "w", encoding="utf-8") as f:
             f.write(f"Gatunek: {genre_name}\n")
@@ -2118,16 +2164,39 @@ class SoulComposerV59:
             f.write(f"Instrument: {instrument_override if instrument_override else 'Auto'}\n")
             f.write(f"Data: {datetime.datetime.now().isoformat()}\n\n")
             
-            # Struktura dla menuetu
+            # --- DYNAMICZNA SEKCJA OPISU (MOZART vs RIEPEL) ---
             if genre_name == "MENUET":
-                f.write("STRUKTURA (Riepel):\n------------------------------\n")
-                f.write("  Część A (Satz):\n")
-                f.write("    t.1-4: Vordersatz → półkadencja (V)\n")
-                f.write("    t.5-8: Nachsatz → pełna kadencja (I)\n")
-                f.write("  Część B (Fortspinnung + Rückgang):\n")
-                f.write("    t.9-12: Fortspinnung (rozwinięcie)\n")
-                f.write("    t.13-16: Rückgang → kadencja końcowa\n")
-                f.write("  Forma: :||: A :||: B :||\n\n")
+                # Sprawdzamy co faktycznie wygenerowano (czy są kości?)
+                structure_data = data.get('structure', {})
+                style_info = data.get('style_info', {})
+                
+                is_mozart_dice = "dice_results" in structure_data
+                
+                # Dynamiczny nagłówek
+                if is_mozart_dice:
+                    header = "Mozart Würfelspiel (K.516f)"
+                else:
+                    # Pobierz nazwę stylu z info lub domyślny Riepel
+                    master_name = style_info.get('primary_name', 'Riepel (Anfangsgründe)')
+                    header = f"{master_name} (Styl Proceduralny)"
+
+                f.write(f"STRUKTURA ({header}):\n{'-'*30}\n")
+                
+                if is_mozart_dice:
+                    f.write(f"  Metoda: Losowanie z tablicy 176 wariantów (Kości Mozarta).\n")
+                    f.write(f"  Wyniki rzutów: {structure_data.get('dice_results')}\n")
+                    f.write("  Forma: :||: A (8t) :||: B (8t) :||\n")
+                else:
+                    f.write("  Część A (Satz): Vordersatz -> Nachsatz\n")
+                    f.write("  Część B (Fortspinnung): Modulacja i powrót\n")
+                    # Info o fuzji stylów (jeśli wystąpiła)
+                    if style_info.get('fusion'):
+                        primary = style_info.get('primary_master')
+                        secondary = style_info.get('secondary_master')
+                        f.write(f"  ★ FUZJA STYLÓW: {primary} + {secondary}\n")
+                    
+                    f.write("  Forma: :||: A :||: B :||\n\n")
+            # --------------------------------------------------
             
             f.write("STAN DUSZY:\n------------------------------\n")
             soul = self.core.get_vector_copy()
@@ -2135,6 +2204,7 @@ class SoulComposerV59:
                 f.write(f"  {axis.capitalize():12}: {soul[i]:+6.2f}\n")
             if paths.get('ogg'):
                 f.write(f"\nAudio: Wygenerowano OGG ({os.path.basename(paths['ogg'])})\n")
-
+        
+        # =================================================================                
         self.logger.log_state(self.core, F_intencja, 1.0, f"Kompozycja {genre_name}", "COMPOSE", "!compose")
         return paths
