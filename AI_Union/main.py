@@ -18,9 +18,7 @@ import os
 
 # Dodaj ścieżki
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(current_dir, 'src', 'union'))
-sys.path.insert(0, os.path.join(current_dir, 'src', 'language'))
-sys.path.insert(0, os.path.join(current_dir, 'src', 'music'))
+# sys.path lines removed as files are now in the root directory
 
 from union_core import EriAmoUnion
 

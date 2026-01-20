@@ -30,7 +30,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, '..'))
 
 candidates = [
-    os.path.join(project_root, 'src', 'language', 'lexicon.soul'),
     os.path.join(project_root, 'lexicon.soul'),
     os.path.join(project_root, 'data', 'lexicon.soul')
 ]

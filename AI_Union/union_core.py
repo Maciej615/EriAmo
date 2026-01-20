@@ -14,13 +14,6 @@ import os
 import time
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-music_path = os.path.join(current_dir, '..', 'music')
-lang_path = os.path.join(current_dir, '..', 'language')
-
-if music_path not in sys.path:
-    sys.path.append(music_path)
-if lang_path not in sys.path:
-    sys.path.append(lang_path)
 
 try:
     from axis_mapper import AxisMapper
