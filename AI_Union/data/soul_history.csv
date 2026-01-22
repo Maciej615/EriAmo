@@ -1,4 +1,0 @@
-timestamp,id_event,description,mode,cos_alpha,compression,emotion_msg,S_logika,S_emocje,S_affections,S_wiedza,S_czas,S_kreacja,S_byt,S_przestrzen,S_improwizacja,F_logika,F_emocje,F_affections,F_wiedza,F_czas,F_kreacja,F_byt,F_przestrzen,F_improwizacja
-2026-01-20T22:32:01.462505,1,COMPOSE,!compose,1.0000,NO,Kompozycja MENUET,2.5,0.0,1.5,8.0,1.0,13.0,0.0,0.0,0.0,2.5,0.0,1.5,3.0,1.0,3.0,0.0,0.0,0.0
-2026-01-20T22:33:07.181559,2,COMPOSE,!compose,1.0000,NO,Kompozycja MENUET,5.0,0.0,3.0,11.0,2.0,16.0,0.0,0.0,0.0,2.5,0.0,1.5,3.0,1.0,3.0,0.0,0.0,0.0
-2026-01-20T22:37:57.378228,1,COMPOSE,!compose,1.0000,NO,Kompozycja MENUET,7.5,0.0,4.5,14.0,3.0,19.0,0.0,0.0,0.0,2.5,0.0,1.5,3.0,1.0,3.0,0.0,0.0,0.0
