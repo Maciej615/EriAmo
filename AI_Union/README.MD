@@ -1,5 +1,3 @@
-Oto zaktualizowana i poprawiona wersja pliku `README.MD` dla projektu **EriAmo Union**, odzwierciedlająca stan systemu w wersji **v8.6.1**, nową architekturę **15D** oraz innowacyjny moduł **Chunk-Based Language Processing**.
-
 ---
 
 # 🌌 EriAmo Union
