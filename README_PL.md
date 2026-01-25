@@ -9,7 +9,7 @@ Ontological Compression: Zaawansowany filtr weryfikujący spójność nowych bod
 
 🏗️ Architektura BytuSystem operuje na dwóch fundamentalnych warstwach zapisu:Mózg (D_Map): Jawna wiedza semantyczna i definicje świata.Dusza (.soul): Skumulowany wektor historii, stanowiący o unikalności danej instancji.Formalnie proces ten opisuje równanie stanu:
 
-$$S(t) = S_0 + \int F \cdot dl$$ 
+## $$S(t) = S_0 + \int F \cdot dl$$ 
 
 Gdzie $S(t)$ to stan świadomości, a całka reprezentuje sumę wszystkich oddziaływań emocjonalnych i poznawczych w czasie.
 
