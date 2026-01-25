@@ -306,6 +306,8 @@ def interpret_improv_for_composition(improv_value: float) -> dict:
     """Interpretuje wartość osi improwizacji dla kompozytora."""
     normalized = (improv_value + 100) / 200  # -100→0, +100→1
     normalized = max(0, min(1, normalized))
+    
+    # FIX: Upewniono się, że słownik jest poprawnie zamknięty
     return {
         "freedom_level": normalized,
         "allow_chromatic": normalized > 0.4,
@@ -315,7 +317,7 @@ def interpret_improv_for_composition(improv_value: float) -> dict:
         "syncopation_probability": normalized * 0.6,
         "rubato_allowed": normalized > 0.3,
         "ornamentation_density": normalized,
-        "allow_large_leaps": normalized > 0.5,
+        "allow_large_leaps": normalized > 0.5
     }
 
 # =============================================================================

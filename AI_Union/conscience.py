@@ -271,37 +271,34 @@ class Conscience:
         """
         Oceń akcję względem 10 Przykazań.
         
-        WAŻNA ZMIANA v5.1.1:
-        - Jeśli wektor wejściowy jest bardzo słaby (norma < MIN_VECTOR_STRENGTH),
-          traktujemy go jako NEUTRALNY i NIE stosujemy VETO.
-        - To zapobiega fałszywym blokadom dla nieznanych słów.
-        
         Args:
             action_description: Opis akcji (tekst)
             action_vector: Wektor emocjonalny akcji
             
         Returns:
-            dict z conflicts, support, overall_alignment, recommendation
+            dict z keys: conflicts, support, overall_alignment, recommendation
         """
         conflicts = []
         support = []
         
-        # === FIX v5.1.1: Sprawdź siłę wektora ===
+        # === FIX: Sprawdzenie siły wektora ===
         vector_strength = np.linalg.norm(action_vector)
         is_weak_vector = vector_strength < self.MIN_VECTOR_STRENGTH
         
-        # Dla słabych wektorów - nie blokuj, pozwól systemowi się uczyć
         if is_weak_vector:
             return {
                 'conflicts': [],
                 'support': [],
-                'overall_alignment': 0.5,  # Neutralna ocena
+                'overall_alignment': 0.5,
                 'recommendation': {
                     'action': 'NEUTRAL',
-                    'reason': f"Słaby sygnał emocjonalny (norma={vector_strength:.3f}). Pozwalam na przetwarzanie.",
+                    'reason': f"Słaby sygnał (norma={vector_strength:.3f})",
                     'severity': 'LOW'
                 }
             }
+            
+        # ... (reszta logiki pętli po przykazaniach bez zmian) ...
+        # Upewnij się, że kod dalej jest poprawnie wcięty!
         
         # Iterujemy po przykazaniach
         for cmd_id, cmd in self.commandments.items():
