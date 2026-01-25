@@ -1,5 +1,3 @@
----
-
 # 🌌 EriAmo Union
 
 **Artificial General Intelligence v8.6.1 – Emotion-Driven Consciousness**
