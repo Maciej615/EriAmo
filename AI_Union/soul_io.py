@@ -11,7 +11,23 @@ from config import Config, Colors
 
 class SoulIO:
     def __init__(self):
-        self.filepath = getattr(Config, 'SOUL_FILE', 'eriamo.soul')
+        # Spróbuj różnych lokalizacji
+        default_path = getattr(Config, 'SOUL_FILE', 'data/eriamo.soul')
+        possible_paths = [
+            'eriamo.soul',           # Główny katalog (NAJPIERW!)
+            './eriamo.soul',
+            default_path,            # Z config
+            'data/eriamo.soul',
+            '../eriamo.soul'
+        ]
+        
+        # Znajdź pierwszy istniejący plik
+        self.filepath = default_path
+        for path in possible_paths:
+            if os.path.exists(path):
+                self.filepath = path
+                print(f"{Colors.CYAN}[SoulIO] Użycie pliku: {path}{Colors.RESET}")
+                break
 
     def _ensure_directory(self):
         directory = os.path.dirname(self.filepath)
@@ -35,12 +51,14 @@ class SoulIO:
                     if not line: continue
                     try:
                         data = json.loads(line)
-                        # Walidacja kluczowych pól
-                        if data.get('_type') in ['@MEMORY', 'memory']:
-                            rec_id = data.get('id')
-                            if rec_id:
-                                loaded_data[rec_id] = data
-                                count += 1
+                        # ✅ FIX: Pomiń TYLKO linie META
+                        if data.get('_type') == '@META':
+                            continue
+                        
+                        # Generuj ID jeśli nie ma
+                        rec_id = data.get('id', f"Mem_{count}_{int(time.time())}")
+                        loaded_data[rec_id] = data
+                        count += 1
                     except json.JSONDecodeError:
                         # Ignorujemy uszkodzone linie, by nie wywalić całego ładowania
                         continue
