@@ -29,23 +29,31 @@ class AxisMapper:
     - Persistent → emotions (modulation, feedback)
     """
     
-    # Language axes (from aii.py)
+    # ═══════════════════════════════════════════════════════════════════════
+    # OSIE - importowane z union_config.py (Single Source of Truth)
+    # ═══════════════════════════════════════════════════════════════════════
+    
+    # Language axes = 8 biologicznych emocji Plutchika
+    # Importujemy z modułu (nie da się importować wewnątrz klasy)
     LANG_AXES = [
         'radość', 'smutek', 'strach', 'gniew',
         'miłość', 'wstręt', 'zaskoczenie', 'akceptacja'
-    ]
+    ]  # = union_config.BIO_AXES
     
-    # Music axes (from amocore_v58.py)
+    # Music axes - zachowujemy 9-osiowy interfejs dla kompatybilności
+    # Pełny system używa 15 osi (union_config.AXES)
     MUSIC_AXES = [
         'logika', 'emocje', 'affections', 'wiedza',
         'czas', 'kreacja', 'byt', 'przestrzen', 'etyka'
     ]
     
-    # Ephemeral (decay over time)
+    # Ephemeral (szybko wygasające)
     MUSIC_EPHEMERAL = ['emocje', 'czas']
     
-    # Persistent (build over time)
+    # Persistent (akumulujące się)
     MUSIC_PERSISTENT = ['logika', 'affections', 'wiedza', 'kreacja', 'byt', 'przestrzen', 'etyka']
+    
+    # UWAGA: Pełna lista 15 osi w union_config.AXES
     
     def __init__(self, verbose: bool = False):
         """

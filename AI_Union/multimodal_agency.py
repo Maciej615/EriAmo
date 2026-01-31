@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-multimodal_agency.py v3.2.0-MusicIntegrated
+multimodal_agency.py v3.2.1-MusicIntegrated-Fixed
 Zarządza autonomicznymi agentami (Krytyk, Uwaga, Twórca) + MUZYKA!
++ Naprawiono _generate_haiku (patch introspect → get_emotions)
++ Dodano fallback dla menuetu (gdy MenuetGenerator niedostępny → freestyle classical)
 """
 
 import threading
 import time
 import random
 import sys
+import traceback
 
 try:
     from union_config import Colors
@@ -18,6 +21,7 @@ except ImportError:
         RESET = "\033[0m"
         YELLOW = "\033[33m"
         GREEN = "\033[32m"
+        RED = "\033[31m"
 
 class MultimodalAgency:
     def __init__(self, union_core, verbose=False, **kwargs):
@@ -34,7 +38,7 @@ class MultimodalAgency:
         self.attention_span = 1.0
         self.last_stimulus_time = time.time()
         
-        # ========== NOWE: INICJALIZACJA SYSTEMU MUZYCZNEGO ==========
+        # ========== INICJALIZACJA SYSTEMU MUZYCZNEGO ==========
         self.music_available = False
         self.music_system = None
         
@@ -113,12 +117,11 @@ class MultimodalAgency:
         elif choice == 'fractal':
             self._generate_fractal()
 
-    # ========== NOWA METODA: AUTONOMICZNE KOMPONOWANIE ==========
+    # ========== AUTONOMICZNE KOMPONOWANIE ==========
     
     def _compose_autonomous_music(self):
         """
         Komponuje muzykę autonomicznie na podstawie stanu emocjonalnego.
-        Automatycznie zapisuje do D_Map z mechanizmem RL.
         """
         if not self.music_available or not self.music_system:
             return
@@ -126,25 +129,23 @@ class MultimodalAgency:
         print(f"\n{Colors.MAGENTA}[AGENCY] 🎵 Tworzę muzykę z nudy...{Colors.RESET}")
         
         try:
-            # Pobierz stan emocjonalny (kompatybilność z różnymi wersjami aii.py)
+            # Pobierz stan emocjonalny
             if hasattr(self.core.aii, 'get_emotions'):
                 metrics = self.core.aii.get_emotions()
             else:
-                # Fallback - bezpośredni dostęp do context_vector
                 metrics = {}
                 for i, axis in enumerate(self.core.aii.AXES_ORDER):
                     metrics[axis] = float(self.core.aii.context_vector[i])
             
-            # Znajdź dominującą emocję/oś
+            # Dominanta
             dominant_axis = max(metrics.items(), key=lambda x: x[1])
             dominant_name = dominant_axis[0]
             dominant_value = dominant_axis[1]
             
             print(f"{Colors.CYAN}[AGENCY] Dominanta: {dominant_name.upper()} ({dominant_value:.2f}){Colors.RESET}")
             
-            # Mapowanie emocji → gatunek muzyczny
+            # Mapowanie emocji → gatunek
             emotion_genre_map = {
-                # Biologia
                 'radość': 'pop',
                 'smutek': 'ambient',
                 'strach': 'ambient',
@@ -153,9 +154,7 @@ class MultimodalAgency:
                 'wstręt': 'punk',
                 'zaskoczenie': 'jazz',
                 'akceptacja': 'folk',
-                
-                # Metafizyka
-                'logika': 'menuet',  # Menuet dla logiki (struktura)
+                'logika': 'menuet',
                 'wiedza': 'classical',
                 'czas': 'ambient',
                 'kreacja': 'jazz',
@@ -166,34 +165,42 @@ class MultimodalAgency:
             
             genre = emotion_genre_map.get(dominant_name, 'menuet')
             
-            # Komponuj!
+            # FALLBACK: jeśli menuet niedostępny → classical freestyle
+            menuet_available = (hasattr(self.music_system, 'menuet_gen') and 
+                              self.music_system.menuet_gen is not None)
+            
             if genre == 'menuet' or dominant_name in ['logika', 'miłość']:
-                # Menuet z pełnym RL
-                print(f"{Colors.GREEN}[AGENCY] Komponuję menuet...{Colors.RESET}")
-                
-                # Wybór tonacji na podstawie emocji
-                keys_major = ['C', 'G', 'D', 'F']
-                keys_minor = ['A', 'D', 'E', 'B']
-                
-                is_minor = metrics.get('smutek', 0) > 0.5 or metrics.get('strach', 0) > 0.5
-                key = random.choice(keys_minor if is_minor else keys_major)
-                
-                result = self.music_system.compose_menuet(
-                    key=key,
-                    minor=is_minor,
-                    use_nn=True
-                )
+                if menuet_available:
+                    print(f"{Colors.GREEN}[AGENCY] Komponuję menuet...{Colors.RESET}")
+                    
+                    keys_major = ['C', 'G', 'D', 'F']
+                    keys_minor = ['A', 'D', 'E', 'B']
+                    
+                    is_minor = metrics.get('smutek', 0) > 0.5 or metrics.get('strach', 0) > 0.5
+                    key = random.choice(keys_minor if is_minor else keys_major)
+                    
+                    result = self.music_system.compose_menuet(
+                        key=key,
+                        minor=is_minor,
+                        use_nn=True
+                    )
+                else:
+                    print(f"{Colors.YELLOW}[AGENCY] MenuetGenerator niedostępny → fallback do classical{Colors.RESET}")
+                    genre = 'classical'
+                    result = self.music_system.compose_freestyle(
+                        genre=genre,
+                        use_nn=True
+                    )
             else:
-                # Freestyle z RL
                 print(f"{Colors.GREEN}[AGENCY] Komponuję {genre}...{Colors.RESET}")
                 result = self.music_system.compose_freestyle(
                     genre=genre,
                     use_nn=True
                 )
             
-            # Raportuj wynik
-            evaluation = result['evaluation']
-            reward = evaluation['reward']
+            # Raport
+            evaluation = result.get('evaluation', {})
+            reward = evaluation.get('reward', 0.0)
             
             if reward > 0.7:
                 mood = f"{Colors.GREEN}Dobra kompozycja!{Colors.RESET}"
@@ -203,28 +210,39 @@ class MultimodalAgency:
                 mood = f"{Colors.RED}Słaba kompozycja{Colors.RESET}"
             
             print(f"{Colors.MAGENTA}[AGENCY] {mood} Reward: {reward:.3f}{Colors.RESET}")
-            print(f"{Colors.MAGENTA}[AGENCY] Zapisano w pamięci: {result['memory_id']}{Colors.RESET}\n")
+            print(f"{Colors.MAGENTA}[AGENCY] Zapisano w pamięci: {result.get('memory_id', 'brak')}{Colors.RESET}\n")
             
-            # Nuda spada po stworzeniu
+            # Redukcja nudy
             self.boredom_level = max(0.3, self.boredom_level - 0.4)
             
         except Exception as e:
             print(f"{Colors.RED}[AGENCY] Błąd komponowania: {e}{Colors.RESET}")
-            import traceback
             traceback.print_exc()
 
-    # ========== ISTNIEJĄCE METODY (BEZ ZMIAN) ==========
+    # ========== HAIKU – NAPRAWIONA WERSJA ==========
 
     def _generate_haiku(self):
         """Wywołuje generator Haiku z rdzenia AII."""
         if hasattr(self.core, 'aii') and self.core.aii and self.core.aii.haiku_gen:
-            intro = self.core.aii.introspect()
+            # Patch: zastąpiono introspect() → get_emotions()
+            emotions = self.core.aii.get_emotions()
+            total_intensity = sum(emotions.values())
+            
+            if total_intensity < 0.01:
+                intro = "Neutralny"
+            else:
+                dominant_axis = max(emotions, key=emotions.get)
+                intensity = emotions[dominant_axis]
+                intro = f"{dominant_axis.upper()} ({intensity:.2f})"
+            
             print(f"\n{Colors.MAGENTA}[AGENCY] 📜 Nuda rodzi słowa... ({intro}){Colors.RESET}")
             
             haiku = self.core.aii.haiku_gen.generate()
             print(f"{Colors.CYAN}{haiku}{Colors.RESET}\n")
         else:
             print(f"{Colors.YELLOW}[AGENCY] Brak modułu Haiku{Colors.RESET}")
+
+    # ========== FRAKTAL ==========
 
     def _generate_fractal(self):
         """Generuje ASCII Fraktal."""

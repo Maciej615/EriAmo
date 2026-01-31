@@ -12,7 +12,7 @@ Projekt: EriAmo - Model Kuli Rzeczywistości
 
 import numpy as np
 import time
-from config import Colors
+from union_config import Colors
 
 class Conscience:
     """

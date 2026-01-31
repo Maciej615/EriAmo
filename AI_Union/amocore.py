@@ -22,20 +22,9 @@ import pandas as pd
 # DEFINICJA ONTOLOGICZNA: 9 WEKTORÓW DUSZY
 # =============================================================================
 
-AXES_LIST = [
-    "logika",       # 0: racjonalność ↔ intuicja
-    "emocje",       # 1: pobudzenie emocjonalne
-    "affections",   # 2: pamięć emocjonalna
-    "wiedza",       # 3: zgromadzona wiedza
-    "czas",         # 4: percepcja tempa
-    "kreacja",      # 5: potencjał twórczy
-    "byt",          # 6: egzystencja
-    "przestrzen",   # 7: percepcja przestrzeni
-    "improwizacja"  # 8: swoboda vs reguły
-]
-
-EPHEMERAL_AXES = ["emocje", "czas"]
-PERSISTENT_AXES = ["affections", "logika", "wiedza", "kreacja", "byt", "przestrzen", "improwizacja"]
+# OSIE importowane z union_config.py (Single Source of Truth)
+# System używa teraz ujednoliconego modelu 15 osi
+from union_config import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES, DIMENSION
 ONTOLOGICAL_THRESHOLD = 0.98
 
 # =============================================================================

@@ -8,7 +8,7 @@ import math
 import numpy as np
 import time
 try:
-    from config import Colors
+    from union_config import Colors
 except ImportError:
     class Colors:
         CYAN = '\033[96m'; RED = '\033[91m'; GREEN = '\033[92m'; YELLOW = '\033[93m'

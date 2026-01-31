@@ -412,8 +412,14 @@ class ProductionMusicSystem:
         print(f"KOMPONOWANIE MENUETU ({key} {'moll' if minor else 'dur'})")
         print(f"{'='*70}{Colors.RESET}\n")
         
-        # Pobierz stan emocjonalny
-        metrics = self.aii.get_emotions()
+        # Pobierz stan emocjonalny (kompatybilność z różnymi wersjami aii.py)
+        if hasattr(self.aii, 'get_emotions'):
+            metrics = self.aii.get_emotions()
+        else:
+            # Fallback - bezpośredni dostęp
+            metrics = {}
+            for i, axis in enumerate(self.aii.AXES_ORDER):
+                metrics[axis] = float(self.aii.context_vector[i])
         
         print(f"[EMOCJE] Dominanta: {self._get_dominant_emotion(metrics)}")
         
@@ -489,8 +495,14 @@ class ProductionMusicSystem:
         print(f"KOMPONOWANIE FREESTYLE ({genre.upper()})")
         print(f"{'='*70}{Colors.RESET}\n")
         
-        # Pobierz emocje
-        metrics = self.aii.get_emotions()
+        # Pobierz emocje (kompatybilność z różnymi wersjami aii.py)
+        if hasattr(self.aii, 'get_emotions'):
+            metrics = self.aii.get_emotions()
+        else:
+            # Fallback - bezpośredni dostęp
+            metrics = {}
+            for i, axis in enumerate(self.aii.AXES_ORDER):
+                metrics[axis] = float(self.aii.context_vector[i])
         print(f"[EMOCJE] Dominanta: {self._get_dominant_emotion(metrics)}")
         
         # Komponuj (używa istniejącej metody z SoulComposerV8)

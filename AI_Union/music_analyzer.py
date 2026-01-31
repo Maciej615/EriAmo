@@ -6,7 +6,7 @@ Analizator Muzyczny EriAmo v5.9.1 [COMPATIBILITY FIX]
 - Mapowanie cech "etycznych" na Affections (Wzniosłość) i Improwizację (Porządek)
 """
 import numpy as np
-from amocore import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
+from union_config import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
 
 
 class MusicAnalyzer:

@@ -7,7 +7,7 @@ import json
 import os
 import time
 import shutil  # Dodano do obsługi kopii zapasowych
-from config import Config, Colors
+from union_config import UnionConfig as Config, Colors
 
 class SoulIO:
     def __init__(self):
