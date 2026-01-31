@@ -9,7 +9,7 @@ Autor: Maciej Mazur (GitHub: Maciej615, Medium: @drwisz)
 
 import random
 import time
-from config import Colors
+from union_config import Colors
 from haiku import HaikuGenerator
 from fractal import FractalGenerator
 

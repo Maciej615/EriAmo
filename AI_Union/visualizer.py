@@ -1,450 +1,379 @@
-# visualizer_v59.py
+# visualizer.py v3.0.0 [15-AXES MODEL]
 # -*- coding: utf-8 -*-
+"""
+Wizualizator Stanu Emocjonalnego EriAmo Union v3.0.0
 
-import pandas as pd
-import matplotlib.pyplot as plt
+Pełna migracja do modelu 15-osiowego:
+- 8 osi Plutchika (biologiczne): radość, smutek, strach, gniew, miłość, wstręt, zaskoczenie, akceptacja
+- 7 osi metafizycznych: logika, wiedza, czas, kreacja, byt, przestrzeń, chaos
+"""
+
 import numpy as np
-import os
-import base64
-from io import BytesIO
-from datetime import datetime
-from union_config import AXES_LIST, EPHEMERAL_AXES, PERSISTENT_AXES
-
-try:
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
-    PLOTLY_AVAIL = True
-except ImportError:
-    PLOTLY_AVAIL = False
-    print("[VIS] Plotly niedostępny - używam matplotlib")
+from typing import Optional, List, Tuple
+from union_config import AXES, DIMENSION, EPHEMERAL_AXES, PERSISTENT_AXES, Colors
 
 
-class SoulVisualizerV59:
-    """Wizualizator stanu i historii duszy."""
+class EmotionVisualizer:
+    """
+    Wizualizacja stanu 15-wymiarowego rdzenia EriAmo.
+    Obsługuje wyświetlanie tekstowe (terminal) i generowanie danych do GUI.
+    """
     
-    DATA_PATH = "data/soul_history.csv"
-    REPORT_DIR = "reports"
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PALETA KOLORÓW DLA 15 OSI
+    # ═══════════════════════════════════════════════════════════════════════════
     
-    def __init__(self):
-        os.makedirs(self.REPORT_DIR, exist_ok=True)
+    # Kolory ANSI dla terminala
+    AXIS_COLORS_ANSI = {
+        # Plutchik (0-7)
+        'radość':     '\033[93m',   # Jasny żółty
+        'smutek':     '\033[34m',   # Niebieski
+        'strach':     '\033[35m',   # Magenta
+        'gniew':      '\033[91m',   # Czerwony
+        'miłość':     '\033[95m',   # Jasny magenta / Różowy
+        'wstręt':     '\033[32m',   # Zielony (jak w Pixar)
+        'zaskoczenie': '\033[96m',  # Cyjan
+        'akceptacja': '\033[92m',   # Jasny zielony
         
-        # Paleta kolorów dla osi
-        self.colors = {
-            'logika': '#3498db',      # Niebieski
-            'emocje': '#e74c3c',      # Czerwony (efemeryczna)
-            'affections': '#9b59b6',  # Fioletowy (trwała!)
-            'wiedza': '#f39c12',      # Pomarańczowy
-            'czas': '#1abc9c',        # Turkusowy (efemeryczna)
-            'kreacja': '#e67e22',     # Ciemny pomarańcz
-            'byt': '#34495e',         # Szary
-            'przestrzen': '#16a085',  # Morski
-            'etyka': '#27ae60'        # Zielony
+        # Metafizyczne (8-14)
+        'logika':     '\033[97m',   # Biały
+        'wiedza':     '\033[33m',   # Żółty/złoty
+        'czas':       '\033[90m',   # Szary
+        'kreacja':    '\033[94m',   # Jasny niebieski
+        'byt':        '\033[37m',   # Jasny szary
+        'przestrzeń': '\033[36m',   # Cyjan
+        'chaos':      '\033[31m',   # Ciemny czerwony
+    }
+    
+    # Kolory RGB dla GUI (0-255)
+    AXIS_COLORS_RGB = {
+        # Plutchik (0-7)
+        'radość':     (255, 223, 0),    # Złoty
+        'smutek':     (65, 105, 225),   # Royal Blue
+        'strach':     (138, 43, 226),   # Blue Violet
+        'gniew':      (220, 20, 60),    # Crimson
+        'miłość':     (255, 105, 180),  # Hot Pink
+        'wstręt':     (0, 128, 0),      # Green
+        'zaskoczenie': (0, 206, 209),   # Dark Turquoise
+        'akceptacja': (144, 238, 144),  # Light Green
+        
+        # Metafizyczne (8-14)
+        'logika':     (245, 245, 245),  # White Smoke
+        'wiedza':     (218, 165, 32),   # Goldenrod
+        'czas':       (128, 128, 128),  # Gray
+        'kreacja':    (100, 149, 237),  # Cornflower Blue
+        'byt':        (210, 180, 140),  # Tan
+        'przestrzeń': (72, 209, 204),   # Medium Turquoise
+        'chaos':      (139, 0, 0),      # Dark Red
+    }
+    
+    # Symbole dla każdej osi (do wizualizacji tekstowej)
+    AXIS_SYMBOLS = {
+        'radość':     '☀',
+        'smutek':     '☁',
+        'strach':     '⚡',
+        'gniew':      '🔥',
+        'miłość':     '♥',
+        'wstręt':     '☠',
+        'zaskoczenie': '✦',
+        'akceptacja': '☮',
+        'logika':     '⚙',
+        'wiedza':     '📚',
+        'czas':       '⏰',
+        'kreacja':    '✨',
+        'byt':        '●',
+        'przestrzeń': '◉',
+        'chaos':      '∞',
+    }
+
+    def __init__(self, core=None, width: int = 40):
+        """
+        Args:
+            core: Referencja do EriAmoCore (opcjonalna)
+            width: Szerokość paska wizualizacji
+        """
+        self.core = core
+        self.bar_width = width
+
+    def get_state_vector(self) -> np.ndarray:
+        """Pobiera wektor stanu z rdzenia lub zwraca zerowy."""
+        if self.core and hasattr(self.core, 'state'):
+            return np.array(self.core.state)
+        return np.zeros(DIMENSION)
+
+    def visualize_bar(self, value: float, max_val: float = 100.0, 
+                      color: str = Colors.WHITE) -> str:
+        """
+        Generuje pasek wizualizacji dla pojedynczej wartości.
+        
+        Args:
+            value: Aktualna wartość
+            max_val: Wartość maksymalna (dla normalizacji)
+            color: Kod koloru ANSI
+            
+        Returns:
+            str: Pasek ASCII z kolorem
+        """
+        normalized = min(abs(value) / max_val, 1.0)
+        filled = int(normalized * self.bar_width)
+        
+        if value >= 0:
+            bar = '█' * filled + '░' * (self.bar_width - filled)
+        else:
+            # Ujemne wartości - odwrócony pasek
+            bar = '░' * (self.bar_width - filled) + '▓' * filled
+            
+        return f"{color}{bar}{Colors.RESET}"
+
+    def print_state(self, title: str = "STAN EMOCJONALNY"):
+        """
+        Wyświetla pełny stan 15-wymiarowy w terminalu.
+        
+        Args:
+            title: Tytuł sekcji
+        """
+        state = self.get_state_vector()
+        max_val = max(abs(state.max()), abs(state.min()), 1.0)
+        
+        print(f"\n{Colors.CYAN}{'='*60}{Colors.RESET}")
+        print(f"{Colors.CYAN}{title:^60}{Colors.RESET}")
+        print(f"{Colors.CYAN}{'='*60}{Colors.RESET}")
+        
+        # Plutchik
+        print(f"\n{Colors.YELLOW}OSIE BIOLOGICZNE (Plutchik){Colors.RESET}")
+        print("-" * 60)
+        
+        for i, axis in enumerate(AXES[:8]):
+            val = state[i]
+            color = self.AXIS_COLORS_ANSI.get(axis, Colors.WHITE)
+            symbol = self.AXIS_SYMBOLS.get(axis, '•')
+            eph = "⚡" if axis in EPHEMERAL_AXES else "  "
+            bar = self.visualize_bar(val, max_val, color)
+            
+            print(f"{symbol} {color}{axis:12s}{Colors.RESET} {eph} [{bar}] {val:+7.2f}")
+        
+        # Metafizyczne
+        print(f"\n{Colors.YELLOW}OSIE METAFIZYCZNE{Colors.RESET}")
+        print("-" * 60)
+        
+        for i, axis in enumerate(AXES[8:], start=8):
+            val = state[i]
+            color = self.AXIS_COLORS_ANSI.get(axis, Colors.WHITE)
+            symbol = self.AXIS_SYMBOLS.get(axis, '•')
+            eph = "⚡" if axis in EPHEMERAL_AXES else "  "
+            bar = self.visualize_bar(val, max_val, color)
+            
+            print(f"{symbol} {color}{axis:12s}{Colors.RESET} {eph} [{bar}] {val:+7.2f}")
+        
+        # Podsumowanie
+        print(f"\n{Colors.CYAN}{'='*60}{Colors.RESET}")
+        
+        # Dominująca emocja
+        dominant_idx = np.argmax(np.abs(state))
+        dominant_axis = AXES[dominant_idx]
+        dominant_val = state[dominant_idx]
+        dominant_color = self.AXIS_COLORS_ANSI.get(dominant_axis, Colors.WHITE)
+        
+        print(f"Dominanta: {dominant_color}{dominant_axis.upper()}{Colors.RESET} = {dominant_val:+.2f}")
+        
+        # Norma wektora (energia całkowita)
+        energy = np.linalg.norm(state)
+        print(f"Energia:   {energy:.2f}")
+        
+        print(f"{Colors.CYAN}{'='*60}{Colors.RESET}\n")
+
+    def print_compact(self):
+        """Kompaktowy widok stanu (jedna linia)."""
+        state = self.get_state_vector()
+        
+        parts = []
+        for i, axis in enumerate(AXES):
+            val = state[i]
+            if abs(val) > 0.1:  # Tylko niezerowe
+                symbol = self.AXIS_SYMBOLS.get(axis, '•')
+                color = self.AXIS_COLORS_ANSI.get(axis, Colors.WHITE)
+                parts.append(f"{color}{symbol}{val:+.1f}{Colors.RESET}")
+        
+        print(" ".join(parts) if parts else "[stan neutralny]")
+
+    def get_dominant_emotion(self) -> Tuple[str, float]:
+        """
+        Zwraca nazwę i wartość dominującej osi.
+        
+        Returns:
+            Tuple[str, float]: (nazwa_osi, wartość)
+        """
+        state = self.get_state_vector()
+        dominant_idx = np.argmax(np.abs(state))
+        return AXES[dominant_idx], state[dominant_idx]
+
+    def get_plutchik_summary(self) -> dict:
+        """
+        Zwraca podsumowanie tylko osi Plutchika (0-7).
+        
+        Returns:
+            dict: {nazwa_osi: wartość}
+        """
+        state = self.get_state_vector()
+        return {AXES[i]: state[i] for i in range(8)}
+
+    def get_metaphysical_summary(self) -> dict:
+        """
+        Zwraca podsumowanie tylko osi metafizycznych (8-14).
+        
+        Returns:
+            dict: {nazwa_osi: wartość}
+        """
+        state = self.get_state_vector()
+        return {AXES[i]: state[i] for i in range(8, 15)}
+
+    def get_rgb_color_for_state(self) -> Tuple[int, int, int]:
+        """
+        Oblicza kolor RGB reprezentujący aktualny stan.
+        Miksuje kolory osi proporcjonalnie do ich wartości.
+        
+        Returns:
+            Tuple[int, int, int]: (R, G, B)
+        """
+        state = self.get_state_vector()
+        
+        # Normalizuj do wartości dodatnich
+        weights = np.abs(state)
+        total_weight = weights.sum()
+        
+        if total_weight < 0.01:
+            return (128, 128, 128)  # Szary dla stanu neutralnego
+        
+        weights = weights / total_weight
+        
+        r, g, b = 0.0, 0.0, 0.0
+        for i, axis in enumerate(AXES):
+            color = self.AXIS_COLORS_RGB.get(axis, (128, 128, 128))
+            r += color[0] * weights[i]
+            g += color[1] * weights[i]
+            b += color[2] * weights[i]
+        
+        return (int(r), int(g), int(b))
+
+    def get_data_for_gui(self) -> dict:
+        """
+        Zwraca dane do wizualizacji w GUI.
+        
+        Returns:
+            dict z pełnymi danymi stanu
+        """
+        state = self.get_state_vector()
+        dominant_axis, dominant_val = self.get_dominant_emotion()
+        
+        return {
+            'axes': AXES,
+            'values': state.tolist(),
+            'dimension': DIMENSION,
+            'dominant': {
+                'axis': dominant_axis,
+                'value': dominant_val,
+                'color_rgb': self.AXIS_COLORS_RGB.get(dominant_axis)
+            },
+            'energy': float(np.linalg.norm(state)),
+            'plutchik': self.get_plutchik_summary(),
+            'metaphysical': self.get_metaphysical_summary(),
+            'mixed_color': self.get_rgb_color_for_state(),
+            'ephemeral': list(EPHEMERAL_AXES),
+            'persistent': list(PERSISTENT_AXES)
         }
 
-    def _load_data(self) -> pd.DataFrame:
-        """Wczytuje dane historyczne."""
-        if not os.path.exists(self.DATA_PATH):
-            return pd.DataFrame()
-        return pd.read_csv(self.DATA_PATH)
+    def print_axis_legend(self):
+        """Wyświetla legendę osi z kolorami i symbolami."""
+        print(f"\n{Colors.CYAN}{'='*50}")
+        print("LEGENDA OSI (Model 15D)")
+        print(f"{'='*50}{Colors.RESET}\n")
+        
+        print(f"{Colors.YELLOW}PLUTCHIK (0-7):{Colors.RESET}")
+        for i, axis in enumerate(AXES[:8]):
+            color = self.AXIS_COLORS_ANSI.get(axis, Colors.WHITE)
+            symbol = self.AXIS_SYMBOLS.get(axis, '•')
+            eph = "⚡ efem." if axis in EPHEMERAL_AXES else ""
+            print(f"  [{i}] {symbol} {color}{axis:12s}{Colors.RESET} {eph}")
+        
+        print(f"\n{Colors.YELLOW}METAFIZYCZNE (8-14):{Colors.RESET}")
+        for i, axis in enumerate(AXES[8:], start=8):
+            color = self.AXIS_COLORS_ANSI.get(axis, Colors.WHITE)
+            symbol = self.AXIS_SYMBOLS.get(axis, '•')
+            eph = "⚡ efem." if axis in EPHEMERAL_AXES else ""
+            print(f"  [{i}] {symbol} {color}{axis:12s}{Colors.RESET} {eph}")
+        
+        print(f"\n{Colors.CYAN}{'='*50}{Colors.RESET}")
 
-    # ============= RAPORT PODSTAWOWY =============
-    def create_basic_report(self) -> str:
-        """Generuje raport HTML z wykresem radarowym."""
-        df = self._load_data()
-        if df.empty:
-            print("[RAPORT] Brak danych")
-            return None
-        
-        last = df.iloc[-1]
-        vec = [last[f"S_{a}"] for a in AXES_LIST]
-        
-        # Radar chart
-        angles = np.linspace(0, 2*np.pi, len(AXES_LIST), endpoint=False).tolist()
-        values = vec + [vec[0]]
-        angles += [angles[0]]
-        
-        fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(polar=True))
-        
-        # Wypełnienie
-        ax.fill(angles, values, alpha=0.25, color='#9b59b6')
-        ax.plot(angles, values, 'o-', linewidth=2, color='#9b59b6')
-        
-        # Oznacz osie efemeryczne na czerwono
-        labels = []
-        for axis in AXES_LIST:
-            if axis in EPHEMERAL_AXES:
-                labels.append(f"{axis.upper()}\n(efemeryczna)")
-            else:
-                labels.append(axis.upper())
-        
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(labels, size=10)
-        ax.set_ylim(-25, 25)
-        ax.set_title(f"Stan Duszy EriAmo v5.9\n{last['description']}", size=14, pad=20)
-        ax.grid(True)
-        
-        # Encode to base64
-        buf = BytesIO()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-        buf.seek(0)
-        img_b64 = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close()
-        
-        # HTML
-        html = f"""<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="utf-8">
-    <title>EriAmo Soul Report v5.9</title>
-    <style>
-        body {{ 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            margin: 40px; 
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #eee;
-            min-height: 100vh;
-        }}
-        .header {{ 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            padding: 30px; 
-            border-radius: 15px; 
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }}
-        .content {{ 
-            background: rgba(255,255,255,0.05); 
-            padding: 30px; 
-            border-radius: 15px; 
-            backdrop-filter: blur(10px);
-        }}
-        .metric {{ 
-            display: inline-block; 
-            margin: 10px; 
-            padding: 20px; 
-            background: rgba(255,255,255,0.1); 
-            border-radius: 10px; 
-            min-width: 150px;
-            text-align: center;
-        }}
-        .metric.ephemeral {{ 
-            border: 2px solid #e74c3c;
-            background: rgba(231, 76, 60, 0.1);
-        }}
-        .metric.persistent {{ 
-            border: 2px solid #9b59b6;
-            background: rgba(155, 89, 182, 0.1);
-        }}
-        .metric-label {{ font-size: 12px; color: #aaa; text-transform: uppercase; }}
-        .metric-value {{ font-size: 28px; font-weight: bold; margin-top: 5px; }}
-        .legend {{ 
-            margin: 20px 0; 
-            padding: 15px; 
-            background: rgba(0,0,0,0.2); 
-            border-radius: 10px; 
-        }}
-        img {{ max-width: 100%; border-radius: 10px; }}
-        h1, h2, h3 {{ margin: 0 0 15px 0; }}
-        .ephemeral-tag {{ color: #e74c3c; font-size: 10px; }}
-        .persistent-tag {{ color: #9b59b6; font-size: 10px; }}
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🎵 EriAmo Soul Report v5.9</h1>
-        <p>Ontologiczna Pamięć Muzyki z Wygaszaniem Emocji</p>
-    </div>
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HELPER: Prosty radar chart (ASCII)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ASCIIRadarChart:
+    """Prosty wykres radarowy w ASCII dla 8 osi Plutchika."""
     
-    <div class="content">
-        <h2>Aktualny Stan Duszy</h2>
-        <p><strong>Zdarzenie:</strong> {last['description']}</p>
-        <p><strong>Czas:</strong> {last['timestamp']}</p>
-        <p><strong>Interpretacja:</strong> {last['emotion_msg']}</p>
-        <p><strong>Geometria:</strong> cos(α) = {last['cos_alpha']}</p>
+    def __init__(self, size: int = 10):
+        self.size = size
+    
+    def draw(self, values: List[float], labels: List[str] = None) -> str:
+        """
+        Rysuje wykres radarowy dla 8 wartości.
         
-        <div class="legend">
-            <span class="ephemeral-tag">■ EFEMERYCZNE</span> - wygasają z czasem (emocje, czas) | 
-            <span class="persistent-tag">■ TRWAŁE</span> - pamięć głęboka (affections, wiedza, logika...)
-        </div>
+        Args:
+            values: Lista 8 wartości (osie Plutchika)
+            labels: Opcjonalne etykiety
+            
+        Returns:
+            str: ASCII art
+        """
+        if len(values) != 8:
+            return "[Radar wymaga dokładnie 8 wartości]"
         
-        <h3>Metryki Duszy</h3>
-        <div>
-            {"".join([
-                f'<div class="metric {"ephemeral" if ax in EPHEMERAL_AXES else "persistent"}">'
-                f'<div class="metric-label">{ax}</div>'
-                f'<div class="metric-value">{vec[i]:+.1f}</div>'
-                f'</div>'
-                for i, ax in enumerate(AXES_LIST)
-            ])}
-        </div>
+        # Normalizuj wartości do 0-1
+        max_val = max(abs(v) for v in values) or 1.0
+        normalized = [abs(v) / max_val for v in values]
         
-        <h3>Wykres Radarowy</h3>
-        <img src="data:image/png;base64,{img_b64}" alt="Soul Radar">
+        labels = labels or AXES[:8]
         
-        <hr style="margin: 40px 0; border-color: #444;">
-        <p style="text-align: center; color: #666; font-size: 12px;">
-            Wygenerowano: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br>
-            EriAmo v5.9 - Wygaszanie Emocji / Trwałość Affections
-        </p>
-    </div>
-</body>
-</html>"""
+        # Uproszczony widok
+        lines = []
+        lines.append("        {:^12s}".format(labels[0][:6]))
+        lines.append("    {:^6s}     {:^6s}".format(labels[7][:4], labels[1][:4]))
+        lines.append("")
+        lines.append("  {:^4s}    ●    {:^4s}".format(labels[6][:4], labels[2][:4]))
+        lines.append("")
+        lines.append("    {:^6s}     {:^6s}".format(labels[5][:4], labels[3][:4]))
+        lines.append("        {:^12s}".format(labels[4][:6]))
         
-        path = f"{self.REPORT_DIR}/report_basic.html"
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(html)
-        
-        print(f"[RAPORT] Zapisano: {path}")
-        return path
+        return "\n".join(lines)
 
-    # ============= TRAJEKTORIA 3D =============
-    def create_3d_trajectory(self, axes=['logika', 'emocje', 'affections']) -> str:
-        """Wizualizuje trajektorię w przestrzeni 3D."""
-        df = self._load_data()
-        if len(df) < 3:
-            print("[3D] Za mało danych")
-            return None
-        
-        x = df[f"S_{axes[0]}"].values
-        y = df[f"S_{axes[1]}"].values
-        z = df[f"S_{axes[2]}"].values
-        
-        if PLOTLY_AVAIL:
-            fig = go.Figure(data=[go.Scatter3d(
-                x=x, y=y, z=z,
-                mode='lines+markers',
-                marker=dict(
-                    size=6,
-                    color=np.arange(len(df)),
-                    colorscale='Viridis',
-                    showscale=True,
-                    colorbar=dict(title="Czas")
-                ),
-                line=dict(color='rgba(100,100,200,0.6)', width=3),
-                text=[f"#{row['id_event']}: {row['description'][:30]}" for _, row in df.iterrows()],
-                hoverinfo='text'
-            )])
-            
-            fig.update_layout(
-                title=f"Trajektoria Duszy: {axes[0]} × {axes[1]} × {axes[2]}",
-                scene=dict(
-                    xaxis_title=f"{axes[0].upper()} {'(efem.)' if axes[0] in EPHEMERAL_AXES else ''}",
-                    yaxis_title=f"{axes[1].upper()} {'(efem.)' if axes[1] in EPHEMERAL_AXES else ''}",
-                    zaxis_title=f"{axes[2].upper()} {'(efem.)' if axes[2] in EPHEMERAL_AXES else ''}",
-                ),
-                width=1000, height=700,
-                template='plotly_dark'
-            )
-            
-            path = f"{self.REPORT_DIR}/trajectory_3d.html"
-            fig.write_html(path)
-        else:
-            # Matplotlib 3D
-            from mpl_toolkits.mplot3d import Axes3D
-            fig = plt.figure(figsize=(12, 9))
-            ax = fig.add_subplot(111, projection='3d')
-            ax.plot(x, y, z, 'b-', alpha=0.6)
-            ax.scatter(x, y, z, c=np.arange(len(df)), cmap='viridis', s=50)
-            ax.set_xlabel(axes[0])
-            ax.set_ylabel(axes[1])
-            ax.set_zlabel(axes[2])
-            ax.set_title("Trajektoria Duszy 3D")
-            
-            path = f"{self.REPORT_DIR}/trajectory_3d.png"
-            plt.savefig(path, dpi=150, bbox_inches='tight')
-            plt.close()
-        
-        print(f"[3D] Zapisano: {path}")
-        return path
 
-    # ============= EWOLUCJA CZASOWA =============
-    def create_timeline_evolution(self) -> str:
-        """Wykres ewolucji wszystkich osi w czasie."""
-        df = self._load_data()
-        if df.empty:
-            return None
-        
-        if PLOTLY_AVAIL:
-            fig = make_subplots(
-                rows=3, cols=3,
-                subplot_titles=[f"{ax.upper()} {'🔻' if ax in EPHEMERAL_AXES else '💎'}" 
-                               for ax in AXES_LIST]
-            )
-            
-            for idx, axis in enumerate(AXES_LIST):
-                row = idx // 3 + 1
-                col = idx % 3 + 1
-                
-                # Styl linii: przerywana dla efemerycznych
-                dash = 'dot' if axis in EPHEMERAL_AXES else 'solid'
-                
-                fig.add_trace(
-                    go.Scatter(
-                        x=df['id_event'],
-                        y=df[f'S_{axis}'],
-                        mode='lines+markers',
-                        name=axis,
-                        line=dict(color=self.colors[axis], width=2, dash=dash),
-                        marker=dict(size=4)
-                    ),
-                    row=row, col=col
-                )
-                
-                # Linia zerowa
-                fig.add_hline(y=0, line_dash="dash", line_color="gray", 
-                             opacity=0.3, row=row, col=col)
-            
-            fig.update_layout(
-                title_text="Ewolucja Osi Duszy w Czasie<br><sub>🔻 efemeryczne (wygasają) | 💎 trwałe (pamięć)</sub>",
-                height=900, width=1400,
-                template='plotly_white',
-                showlegend=False
-            )
-            
-            path = f"{self.REPORT_DIR}/timeline_evolution.html"
-            fig.write_html(path)
-        else:
-            fig, axes_plt = plt.subplots(3, 3, figsize=(16, 12))
-            fig.suptitle('Ewolucja Osi Duszy w Czasie', fontsize=16)
-            
-            for idx, axis in enumerate(AXES_LIST):
-                ax = axes_plt[idx // 3, idx % 3]
-                style = '--' if axis in EPHEMERAL_AXES else '-'
-                ax.plot(df['id_event'], df[f'S_{axis}'], 
-                       color=self.colors[axis], linewidth=2, 
-                       linestyle=style, marker='o', markersize=3)
-                ax.set_title(f"{axis.upper()} {'(efem.)' if axis in EPHEMERAL_AXES else ''}")
-                ax.axhline(y=0, color='k', linestyle='--', alpha=0.3)
-                ax.grid(True, alpha=0.3)
-            
-            plt.tight_layout()
-            path = f"{self.REPORT_DIR}/timeline_evolution.png"
-            plt.savefig(path, dpi=150)
-            plt.close()
-        
-        print(f"[TIMELINE] Zapisano: {path}")
-        return path
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEST
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    # ============= MAPA EMOCJONALNA =============
-    def create_emotional_map(self) -> str:
-        """Mapa w przestrzeni emocje × affections."""
-        df = self._load_data()
-        if df.empty:
-            return None
-        
-        if PLOTLY_AVAIL:
-            fig = go.Figure(data=go.Scatter(
-                x=df['S_emocje'],
-                y=df['S_affections'],
-                mode='markers+text',
-                marker=dict(
-                    size=14,
-                    color=df['cos_alpha'],
-                    colorscale='RdYlGn',
-                    showscale=True,
-                    colorbar=dict(title="cos(α)"),
-                    line=dict(width=1, color='white')
-                ),
-                text=[f"#{i}" for i in df['id_event']],
-                textposition="top center",
-                textfont=dict(size=9),
-                hovertemplate=(
-                    '<b>Event %{text}</b><br>'
-                    'Emocje: %{x:.2f} (efemeryczne)<br>'
-                    'Affections: %{y:.2f} (trwałe)<br>'
-                    '<extra></extra>'
-                )
-            ))
-            
-            # Kwadranty
-            fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
-            fig.add_vline(x=0, line_dash="dash", line_color="gray", opacity=0.5)
-            
-            # Etykiety kwadrantów
-            annotations = [
-                dict(x=12, y=12, text="Radość<br>+ Głęboki zachwyt", font=dict(color="green")),
-                dict(x=-12, y=12, text="Smutek chwilowy<br>+ Głębokie ciepło", font=dict(color="blue")),
-                dict(x=-12, y=-12, text="Smutek<br>+ Głęboka trauma", font=dict(color="red")),
-                dict(x=12, y=-12, text="Radość chwilowa<br>+ Głęboki niepokój", font=dict(color="orange")),
-            ]
-            for ann in annotations:
-                fig.add_annotation(**ann, showarrow=False, opacity=0.6, font_size=10)
-            
-            fig.update_layout(
-                title="Mapa Emocjonalna Duszy<br><sub>X: Emocje (efemeryczne) | Y: Affections (trwałe)</sub>",
-                xaxis_title="EMOCJE (wygasają) →",
-                yaxis_title="AFFECTIONS (pamięć głęboka) →",
-                width=900, height=700,
-                template='plotly_white'
-            )
-            
-            path = f"{self.REPORT_DIR}/emotional_map.html"
-            fig.write_html(path)
-        else:
-            fig, ax = plt.subplots(figsize=(10, 8))
-            scatter = ax.scatter(
-                df['S_emocje'], df['S_affections'],
-                c=df['cos_alpha'], cmap='RdYlGn', s=100,
-                edgecolors='black', linewidth=1
-            )
-            ax.axhline(y=0, color='k', linestyle='--', alpha=0.3)
-            ax.axvline(x=0, color='k', linestyle='--', alpha=0.3)
-            ax.set_xlabel('Emocje (efemeryczne)')
-            ax.set_ylabel('Affections (trwałe)')
-            ax.set_title('Mapa Emocjonalna Duszy')
-            plt.colorbar(scatter, label='cos(α)')
-            
-            path = f"{self.REPORT_DIR}/emotional_map.png"
-            plt.savefig(path, dpi=150, bbox_inches='tight')
-            plt.close()
-        
-        print(f"[MAPA] Zapisano: {path}")
-        return path
-
-    # ============= PEŁNY RAPORT =============
-    def create_complete_report(self) -> dict:
-        """Generuje wszystkie wizualizacje."""
-        print("\n" + "="*60)
-        print("🎨 GENEROWANIE RAPORTU WIZUALIZACJI v5.9")
-        print("="*60)
-        
-        paths = {
-            'basic': self.create_basic_report(),
-            '3d': self.create_3d_trajectory(),
-            'timeline': self.create_timeline_evolution(),
-            'emotional': self.create_emotional_map()
-        }
-        
-        print("\n" + "-"*60)
-        print("✅ RAPORT WYGENEROWANY")
-        for name, path in paths.items():
-            if path:
-                print(f"  {name.upper()}: {path}")
-        print("="*60 + "\n")
-        
-        return paths
-
-    # ============= LISTA KOMPOZYCJI =============
-    def list_compositions(self) -> list:
-        """Wyświetla listę kompozycji."""
-        comp_dir = "compositions"
-        if not os.path.exists(comp_dir):
-            print("Brak katalogu kompozycji.")
-            return []
-        
-        files = [f for f in os.listdir(comp_dir) if f.endswith('.mid')]
-        if not files:
-            print("Brak kompozycji.")
-            return []
-        
-        print("\n" + "="*60)
-        print("🎵 LISTA KOMPOZYCJI ERIAMO")
-        print("="*60)
-        
-        for i, f in enumerate(files, 1):
-            parts = f.replace('.mid', '').split('_')
-            print(f"{i}. {f}")
-            print(f"   Gatunek: {parts[0] if parts else '?'}")
-            print(f"   Ścieżka: {os.path.join(comp_dir, f)}")
-            print("-"*60)
-        
-        return files
+if __name__ == "__main__":
+    print("\n" + "=" * 60)
+    print("TEST: Visualizer v3.0.0 (15 osi)")
+    print("=" * 60)
+    
+    viz = EmotionVisualizer()
+    
+    # Test 1: Legenda
+    viz.print_axis_legend()
+    
+    # Test 2: Stan (zerowy bez core)
+    viz.print_state("STAN TESTOWY")
+    
+    # Test 3: Kolor RGB
+    rgb = viz.get_rgb_color_for_state()
+    print(f"Kolor RGB: {rgb}")
+    
+    # Test 4: Dane dla GUI
+    data = viz.get_data_for_gui()
+    print(f"\nDane GUI:")
+    print(f"  Wymiar: {data['dimension']}")
+    print(f"  Dominanta: {data['dominant']}")
+    print(f"  Energia: {data['energy']:.2f}")
+    
+    print("\n✅ Testy visualizer zakończone!")
