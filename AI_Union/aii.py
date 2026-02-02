@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-aii.py v9.6.1-Master-Torch [EVOLUTION SCALONY - FULL INTEGRATION with PyTorch]
-RDZEŃ MASTER BRAIN - EriAmo Union
-Autor: Maciej A. Mazur & Grok (scalenie 9.5.3 + 9.6.0 + PyTorch integration)
+aii.py v9.7.0-PFC [EVOLUTION SCALONY - FULL INTEGRATION with PyTorch + PFC]
+RDZEŃ MASTER BRAIN - EriAmo Union + Prefrontal Cortex
+Autor: Maciej A. Mazur & Grok (scalenie 9.5.3 + 9.6.0 + PyTorch + PFC integration)
 
 Zmiany względem 9.6.1-Master:
-- INTEGRACJA PYTORCH: VectorCortex zastąpiony FFN z autograd i optimizerem (tylko tu, bo wysoko uzasadnione dla uczenia predykcyjnego).
+- INTEGRACJA PYTORCH: VectorCortex zastąpiony FFN z autograd i optimizerem
+- PREFRONTAL CORTEX: Working Memory + Hierarchical Chunk Access
+- Ulepszona rezonancja przez fraktalny dostęp do chunków
+- Executive filtering w odpowiedziach
+- Nowe komendy diagnostyczne PFC
 """
 
 import sys
@@ -17,7 +21,7 @@ import json
 import random
 import string
 import numpy as np
-import torch  # Dodany import dla PyTorch (dostępny w env)
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -49,6 +53,12 @@ try:
     from explorer import WorldExplorer
 except ImportError:
     WorldExplorer = None
+try:
+    from prefrontal_cortex import PrefrontalCortex
+    PFC_AVAILABLE = True
+except ImportError:
+    PFC_AVAILABLE = False
+    print("⚠ Prefrontal Cortex niedostępny - działam bez WM")
 
 
 # --- KLASY POMOCNICZE ---
@@ -56,26 +66,26 @@ except ImportError:
 class VectorCortex:
     def __init__(self, axes_count):
         self.dims = axes_count
-        self.hidden_dim = 32  # Ukryta warstwa dla FFN (dopasowana do dims)
+        self.hidden_dim = 32
         self.model = nn.Sequential(
             nn.Linear(self.dims, self.hidden_dim),
             nn.ReLU(),
             nn.Linear(self.hidden_dim, self.dims),
-            nn.Softmax(dim=0)  # Softmax dla probabilistycznej predykcji
+            nn.Softmax(dim=0)
         )
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01)  # Optimizer zamiast ręcznej rate
-        self.criterion = nn.MSELoss()  # Loss dla uczenia (MSE między pred a actual)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01)
+        self.criterion = nn.MSELoss()
     
     def predict(self, current_vector):
-        current_vector = np.array(current_vector)  # Kompatybilność z NumPy
+        current_vector = np.array(current_vector)
         if np.sum(current_vector) == 0:
             return np.zeros(self.dims)
         tensor_in = torch.tensor(current_vector, dtype=torch.float32)
         with torch.no_grad():
             pred = self.model(tensor_in)
-        return pred.numpy()  # Zwrot jako NumPy dla reszty kodu
+        return pred.numpy()
 
-    def learn(self, prev, actual, rate=0.01):  # Rate teraz to lr, ale zachowane dla kompatybilności
+    def learn(self, prev, actual, rate=0.01):
         prev = np.array(prev)
         actual = np.array(actual)
         if np.sum(prev) == 0 or np.sum(actual) == 0:
@@ -89,11 +99,11 @@ class VectorCortex:
         loss.backward()
         self.optimizer.step()
         
-        return loss.item()  # Zwrot loss zamiast norm (lepsza metryka dla RL)
+        return loss.item()
     
     def save(self, path):
         try:
-            torch.save(self.model.state_dict(), path + '.cortex_torch.pt')  # Save PyTorch model
+            torch.save(self.model.state_dict(), path + '.cortex_torch.pt')
         except:
             pass
 
@@ -124,7 +134,7 @@ class AttentionCortex:
             analysis = self.brain.chunk_lexicon.analyze_text_chunks(txt, verbose=False)
             if analysis['coverage'] < 0.7:
                 self.brain.chunk_lexicon.extract_chunks_from_text(txt)
-                sys.__stdout__.write(f"\n{Colors.FAINT}[ATTENTION] Krystalizacja wzorca: {txt[:35]}...{Colors.RESET}\n")
+                sys.__stdout__.write(f"\n{Colors.DIM}[ATTENTION] Krystalizacja wzorca: {txt[:35]}...{Colors.RESET}\n")
         
         if random.random() < 0.3:
             self.introspective_echo()
@@ -174,7 +184,7 @@ class AttentionCortex:
 # --- RDZEŃ SYSTEMU ---
 
 class AII:
-    VERSION = "9.6.1-Master-Torch"
+    VERSION = "9.7.0-PFC"
     AXES_ORDER = UnionConfig.AXES
     DIM = UnionConfig.DIMENSION
 
@@ -205,6 +215,17 @@ class AII:
         self.haiku_gen = haiku.HaikuGenerator(self)
         self.cortex = VectorCortex(self.DIM)
         self.attention = AttentionCortex(self)
+        
+        # === PREFRONTAL CORTEX ===
+        self.prefrontal = None
+        if PFC_AVAILABLE and self.chunk_lexicon:
+            self.prefrontal = PrefrontalCortex(
+                self.chunk_lexicon, 
+                verbose=self.standalone_mode
+            )
+            print(f"{Colors.GREEN}[PFC] Płat przedczołowy aktywny - WM: {self.prefrontal.WM_OPTIMAL}{Colors.RESET}")
+        elif PFC_AVAILABLE:
+            print(f"{Colors.YELLOW}[PFC] ChunkLexicon wymagany dla PFC!{Colors.RESET}")
 
         if self.explorer:
             threading.Thread(target=self._bg_explore, daemon=True).start()
@@ -248,6 +269,105 @@ class AII:
         return min(1.0, base)
 
     def _resonance_engine(self, vec, text, threshold=0.15):
+        """
+        ULEPSZONE wyszukiwanie rezonancyjne z Prefrontal Cortex.
+        
+        NOWA LOGIKA (v9.7.0):
+        1. PFC Hierarchical Access (jeśli dostępny) - fraktalny dostęp
+        2. Executive Filter - wybór top-k najważniejszych
+        3. Tradycyjna rezonancja (fallback)
+        """
+        if self.prefrontal:
+            return self._resonance_with_pfc(vec, text, threshold)
+        
+        return self._resonance_traditional(vec, text, threshold)
+    
+    def _resonance_with_pfc(self, vec, text, threshold=0.15):
+        """
+        Rezonancja z użyciem Prefrontal Cortex.
+        
+        PROCES:
+        1. PFC Hierarchical Access → chunki na 3 poziomach
+        2. Executive Filter → wybór top-3
+        3. D_Map search z priorytetem dla PFC matches
+        """
+        # 1. Hierarchiczny dostęp do chunków
+        pfc_results = self.prefrontal.hierarchical_access(
+            text, 
+            max_depth=3,
+            use_priming=True
+        )
+        
+        # 2. Executive filtering (top-3 najważniejsze)
+        top_chunks = self.prefrontal.executive_filter(
+            pfc_results,
+            top_k=3,
+            min_score=0.5
+        )
+        
+        # 3. Jeśli PFC znalazł chunki wysokiej jakości
+        if top_chunks and top_chunks[0]['score'] > 2.0:
+            best_chunk = top_chunks[0]['chunk']
+            
+            if self.standalone_mode:
+                from_wm = " [WM]" if top_chunks[0].get('from_wm') else ""
+                print(f"{Colors.MAGENTA}[PFC]{Colors.RESET} Chunk: \"{best_chunk.text}\"{from_wm}")
+            
+            # Znajdź powiązane wspomnienia w D_Map
+            candidates = self._find_memories_for_chunk(best_chunk, vec)
+            
+            if candidates:
+                winner = candidates[0]
+                winner[2]['weight'] = min(1.0, winner[2].get('weight', 0.5) + 0.02)
+                self.last_winner_id = winner[1]
+                
+                return f"[PFC] {winner[2]['tresc']}"
+        
+        # 4. Fallback - jeśli PFC nie znalazł nic mocnego
+        if self.standalone_mode:
+            print(f"{Colors.YELLOW}[PFC] Słabe dopasowanie, tryb standardowy{Colors.RESET}")
+        
+        return self._resonance_traditional(vec, text, threshold)
+    
+    def _find_memories_for_chunk(self, chunk, vec):
+        """
+        Znajduje wspomnienia w D_Map związane z chunkiem PFC.
+        
+        Returns:
+            Lista (score, mem_id, entry) posortowana malejąco
+        """
+        candidates = []
+        chunk_words = set(chunk.text.split())
+        
+        for mid, entry in self.D_Map.items():
+            content = entry.get('tresc', '').lower()
+            content_words = set(content.split())
+            
+            # Scoring
+            score = 0.0
+            
+            # Overlap słów
+            overlap = len(chunk_words & content_words)
+            score += overlap * 8.0
+            
+            # Podobieństwo wektorowe
+            mem_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
+            if np.linalg.norm(mem_vec) > 0 and np.linalg.norm(vec) > 0:
+                score += np.dot(vec, mem_vec) * 4.0
+            
+            # Waga wspomnień
+            score *= (0.5 + entry.get('weight', 0.5))
+            
+            if score > 0.5:
+                candidates.append((score, mid, entry))
+        
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        return candidates
+    
+    def _resonance_traditional(self, vec, text, threshold=0.15):
+        """
+        Tradycyjny mechanizm rezonancji (bez PFC).
+        """
         def _normalize(txt):
             return txt.lower().strip()
         
@@ -300,6 +420,9 @@ class AII:
                     "  /emotions    - Wizualizacja wektora 15D\n"
                     "  /introspect  - Dominująca emocja\n"
                     "  /reflect     - Ręczne echo\n"
+                    "  /pfc         - Status Prefrontal Cortex (WM)\n"
+                    "  /pfc_clear   - Wyczyść Working Memory\n"
+                    "  /pfc_search [tekst] - Hierarchiczne wyszukiwanie\n"
                     "  /read [plik] - Głębokie mapowanie pliku\n"
                     "  /remember    - Ręczne utrwalenie faktu\n"
                     "  /art         - Generowanie Haiku\n"
@@ -314,16 +437,60 @@ class AII:
                 "Kurz": self.kurz is not None,
                 "Explorer": self.explorer is not None,
                 "Cortex": self.cortex is not None,
-                "Attention": self.attention is not None
+                "Attention": self.attention is not None,
+                "PFC": self.prefrontal is not None
             }
             m_str = "\n".join([f"  {k:10}: {'[OK]' if v else '[OFF]'}" for k, v in modules.items()])
             temp = dp.get('temp_dev_0', 'N/A')
             avg_weight = np.mean([e.get('weight', 0.5) for e in self.D_Map.values()]) if self.D_Map else 0
-            return f"{Colors.CYAN}--- STATUS EriAmo {self.VERSION} ---{Colors.RESET}\n" \
+            
+            status = f"{Colors.CYAN}--- STATUS EriAmo {self.VERSION} ---{Colors.RESET}\n" \
                    f"{m_str}\n" \
                    f"Pamięć: {len(self.D_Map)} (avg weight: {avg_weight:.2f})\n" \
-                   f"Ostatnie RL: {self.last_winner_id}\n" \
-                   f"TEMP CPU: {temp}°C"
+                   f"Ostatnie RL: {self.last_winner_id}\n"
+            
+            if self.prefrontal:
+                pfc_stats = self.prefrontal.get_statistics()
+                status += f"PFC WM: {pfc_stats['wm_size']}/{pfc_stats['wm_capacity']} (hit rate: {pfc_stats['cache_hit_rate']:.1f}%)\n"
+            
+            status += f"TEMP CPU: {temp}°C"
+            return status
+
+        elif c == '/pfc':
+            if not self.prefrontal:
+                return f"{Colors.RED}Prefrontal Cortex nieaktywny{Colors.RESET}"
+            
+            self.prefrontal.print_status()
+            return ""
+        
+        elif c == '/pfc_clear':
+            if not self.prefrontal:
+                return f"{Colors.RED}Prefrontal Cortex nieaktywny{Colors.RESET}"
+            
+            self.prefrontal.clear_working_memory()
+            return f"{Colors.GREEN}Working Memory wyczyszczona{Colors.RESET}"
+        
+        elif c == '/pfc_search':
+            if not self.prefrontal:
+                return f"{Colors.RED}Prefrontal Cortex nieaktywny{Colors.RESET}"
+            
+            if not arg:
+                return f"{Colors.RED}Podaj tekst do wyszukania: /pfc_search [tekst]{Colors.RESET}"
+            
+            results = self.prefrontal.hierarchical_access(arg, max_depth=3)
+            
+            if not results:
+                return f"{Colors.YELLOW}Brak wyników dla: {arg}{Colors.RESET}"
+            
+            output = [f"{Colors.CYAN}Hierarchiczne wyszukiwanie: \"{arg}\"{Colors.RESET}"]
+            output.append(f"Znaleziono: {len(results)} chunków\n")
+            
+            for i, r in enumerate(results[:5], 1):
+                from_wm = "[WM] " if r.get('from_wm') else ""
+                level_name = {5: "CTX", 3: "PHR", 2: "BIG"}.get(r['level'], "???")
+                output.append(f"  [{i}] {from_wm}[{level_name}] \"{r['chunk'].text}\" (score: {r['score']:.2f})")
+            
+            return "\n".join(output)
 
         elif c == '/rlstats':
             weights = [e.get('weight', 0.5) for e in self.D_Map.values()]
@@ -339,7 +506,7 @@ class AII:
 
         elif c == '/introspect':
             if np.sum(self.context_vector) < self.MIN_EMOTION_THRESHOLD:
-                return f"{Colors.FAINT}Neutralny.{Colors.RESET}"
+                return f"{Colors.DIM}Neutralny.{Colors.RESET}"
             idx = np.argmax(self.context_vector)
             dom_axis = self.AXES_ORDER[idx]
             intensity = self.context_vector[idx]
@@ -516,6 +683,19 @@ class AII:
                     if '_type' not in entry:
                         entry['_type'] = "@MEMORY"
                 self.D_Map = loaded
+
+    def get_emotions(self):
+        """Zwraca słownik emocji (dla kompatybilności z innymi modułami)."""
+        return {self.AXES_ORDER[i]: float(self.context_vector[i]) for i in range(self.DIM)}
+
+    def introspect(self):
+        """Zwraca tekstową introspekcję (dla kompatybilności z haiku)."""
+        if np.sum(self.context_vector) < self.MIN_EMOTION_THRESHOLD:
+            return "Neutralny"
+        idx = np.argmax(self.context_vector)
+        dom_axis = self.AXES_ORDER[idx]
+        intensity = self.context_vector[idx]
+        return f"Dominanta: {dom_axis.upper()} ({intensity:.2f})"
 
 
 if __name__ == "__main__":
