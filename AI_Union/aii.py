@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-aii.py v9.6.3-MambaHybrid [CENTRALIZACJA & TRWAŁOŚĆ & MAMBA TRAJEKTORIA]
+aii.py v9.6.1-Master-Torch [EVOLUTION SCALONY - FULL INTEGRATION with PyTorch]
 RDZEŃ MASTER BRAIN - EriAmo Union
-Autor: Maciej A. Mazur & EriAmo AI Collaborator (z integracją Mamby by Grok)
+Autor: Maciej A. Mazur & Grok (scalenie 9.5.3 + 9.6.0 + PyTorch integration)
 
-Zmiany względem 9.6.2-Master:
-- DODANO: Hybrydowa integracja Mamby jako predyktor trajektorii emocjonalnej (zapobiega vanishing wzmocnienia).
-- TRWAŁOŚĆ: Zapis/wczytanie stanu Mamby (mamba_traj.pt).
-- BEZPIECZEŃSTWO: Opcjonalne – działa bez mamba-ssm (z warningiem).
-- FILOZOFIA: Wzmacnianie nieodwracalnej trajektorii Bytu przez selektywne SSM.
+Zmiany względem 9.6.1-Master:
+- INTEGRACJA PYTORCH: VectorCortex zastąpiony FFN z autograd i optimizerem (tylko tu, bo wysoko uzasadnione dla uczenia predykcyjnego).
 """
 
 import sys
@@ -20,93 +17,115 @@ import json
 import random
 import string
 import numpy as np
-import torch
-try:
-    from mamba_ssm import Mamba
-except ImportError:
-    print("⚠ Mamba-ssm nie zainstalowana – trajektoria emocji bez wzmocnienia SSM.")
-    Mamba = None
+import torch  # Dodany import dla PyTorch (dostępny w env)
+import torch.nn as nn
+import torch.optim as optim
 
-# Import Konstytucji jako jedynego źródła prawdy
 try:
-    from union_config import UnionConfig, Colors, AXES, DIMENSION
+    from union_config import UnionConfig, Colors
 except ImportError:
     print("⚠ KRYTYCZNY BŁĄD: Brak union_config.py")
     sys.exit(1)
 
 import haiku
 
-# Bezpieczne importy modułów EriAmo
-try: from chunk_lexicon import ChunkLexicon
-except ImportError: ChunkLexicon = None
-try: from soul_io import SoulIO
-except ImportError: SoulIO = None
-try: from lexicon import EvolvingLexicon
-except ImportError: EvolvingLexicon = None
-try: from kurz import Kurz
-except ImportError: Kurz = None
-try: from explorer import WorldExplorer
-except ImportError: WorldExplorer = None
+try:
+    from chunk_lexicon import ChunkLexicon
+except ImportError:
+    ChunkLexicon = None
+try:
+    from soul_io import SoulIO
+except ImportError:
+    SoulIO = None
+try:
+    from lexicon import EvolvingLexicon
+except ImportError:
+    EvolvingLexicon = None
+try:
+    from kurz import Kurz
+except ImportError:
+    Kurz = None
+try:
+    from explorer import WorldExplorer
+except ImportError:
+    WorldExplorer = None
+
 
 # --- KLASY POMOCNICZE ---
 
 class VectorCortex:
-    """Sieć asocjacyjna zarządzająca przejściami emocjonalnymi."""
     def __init__(self, axes_count):
         self.dims = axes_count
-        self.transition_matrix = np.ones((self.dims, self.dims)) * 0.1
-   
+        self.hidden_dim = 32  # Ukryta warstwa dla FFN (dopasowana do dims)
+        self.model = nn.Sequential(
+            nn.Linear(self.dims, self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.dims),
+            nn.Softmax(dim=0)  # Softmax dla probabilistycznej predykcji
+        )
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01)  # Optimizer zamiast ręcznej rate
+        self.criterion = nn.MSELoss()  # Loss dla uczenia (MSE między pred a actual)
+    
     def predict(self, current_vector):
+        current_vector = np.array(current_vector)  # Kompatybilność z NumPy
         if np.sum(current_vector) == 0:
             return np.zeros(self.dims)
-        idx = np.argmax(current_vector)
-        probs = self.transition_matrix[idx]
-        return probs / (np.sum(probs) + 1e-9)
-    def learn(self, prev, actual, rate=0.1):
+        tensor_in = torch.tensor(current_vector, dtype=torch.float32)
+        with torch.no_grad():
+            pred = self.model(tensor_in)
+        return pred.numpy()  # Zwrot jako NumPy dla reszty kodu
+
+    def learn(self, prev, actual, rate=0.01):  # Rate teraz to lr, ale zachowane dla kompatybilności
+        prev = np.array(prev)
+        actual = np.array(actual)
         if np.sum(prev) == 0 or np.sum(actual) == 0:
             return 0.0
-        p_idx = np.argmax(prev)
-        a_idx = np.argmax(actual)
-        old_pred = self.predict(prev)
-        self.transition_matrix[p_idx][a_idx] += rate
-        return np.linalg.norm(actual - old_pred)
-   
+        tensor_prev = torch.tensor(prev, dtype=torch.float32)
+        tensor_actual = torch.tensor(actual, dtype=torch.float32)
+        
+        self.optimizer.zero_grad()
+        pred = self.model(tensor_prev)
+        loss = self.criterion(pred, tensor_actual)
+        loss.backward()
+        self.optimizer.step()
+        
+        return loss.item()  # Zwrot loss zamiast norm (lepsza metryka dla RL)
+    
     def save(self, path):
         try:
-            with open(path + '.cortex', 'w') as f:
-                json.dump(self.transition_matrix.tolist(), f)
-        except: pass
+            torch.save(self.model.state_dict(), path + '.cortex_torch.pt')  # Save PyTorch model
+        except:
+            pass
+
     def load(self, path):
         try:
-            if os.path.exists(path + '.cortex'):
-                with open(path + '.cortex', 'r') as f:
-                    mat = np.array(json.load(f))
-                    if mat.shape == (self.dims, self.dims):
-                        self.transition_matrix = mat
-        except: pass
+            if os.path.exists(path + '.cortex_torch.pt'):
+                self.model.load_state_dict(torch.load(path + '.cortex_torch.pt'))
+        except:
+            pass
+
 
 class AttentionCortex:
-    """Moduł zadumy i czyszczenia pamięci."""
     def __init__(self, master_brain):
         self.brain = master_brain
-        self.max_memories = UnionConfig.MAX_MEMORY_SIZE
+        self.max_memories = 50000
 
     def run_cycle(self):
         if not self.brain.D_Map or not self.brain.chunk_lexicon:
             return
-       
+        
         if len(self.brain.D_Map) > self.max_memories:
             self._prune_memory()
-       
+        
         mem_id = random.choice(list(self.brain.D_Map.keys()))
         entry = self.brain.D_Map[mem_id]
         txt = entry.get('tresc', '')
         if len(txt) > 10:
             analysis = self.brain.chunk_lexicon.analyze_text_chunks(txt, verbose=False)
-            if analysis['coverage'] < UnionConfig.CHUNK_MATCH_MIN:
+            if analysis['coverage'] < 0.7:
                 self.brain.chunk_lexicon.extract_chunks_from_text(txt)
-                sys.__stdout__.write(f"\n{Colors.DIM}[ATTENTION] Krystalizacja wzorca: {txt[:35]}...{Colors.RESET}\n")
-       
+                sys.__stdout__.write(f"\n{Colors.FAINT}[ATTENTION] Krystalizacja wzorca: {txt[:35]}...{Colors.RESET}\n")
+        
         if random.random() < 0.3:
             self.introspective_echo()
 
@@ -123,19 +142,27 @@ class AttentionCortex:
     def introspective_echo(self):
         idx = np.argmax(self.brain.context_vector)
         intensity = self.brain.context_vector[idx]
-        if intensity < 0.2: return
-       
-        candidates = [e for e in self.brain.D_Map.values()
-                     if np.array(e.get('wektor_C_Def', [0] * self.brain.DIM))[idx] > 0.4]
-       
+        if intensity < 0.2:
+            return
+        
+        candidates = []
+        for entry in self.brain.D_Map.values():
+            mem_vec = np.array(entry.get('wektor_C_Def', [0] * 15))
+            if len(mem_vec) > idx and mem_vec[idx] > 0.4:
+                candidates.append(entry)
+        
         if candidates:
             echo_entry = random.choice(candidates)
             echo_entry['weight'] = min(1.0, echo_entry.get('weight', 0.5) + 0.05)
             dom_axis = self.brain.AXES_ORDER[idx]
-            sys.__stdout__.write(f"\n{Colors.MAGENTA}[REFLEKSJA]{Colors.RESET} Echo {dom_axis.upper()}: \"{echo_entry['tresc'][:60]}...\"\n")
+            sys.__stdout__.write(
+                f"\n{Colors.MAGENTA}[REFLEKSJA]{Colors.RESET} "
+                f"Echo {dom_axis.upper()}: \"{echo_entry['tresc'][:60]}...\"\n"
+            )
 
     def reflect_on_input(self, text, input_vec):
-        if np.sum(input_vec) == 0: return
+        if np.sum(input_vec) == 0:
+            return
         resonance = np.dot(self.brain.context_vector, input_vec)
         dom_axis = self.brain.AXES_ORDER[np.argmax(self.brain.context_vector)].upper()
         if resonance > 0.4:
@@ -143,40 +170,33 @@ class AttentionCortex:
         elif resonance < 0.05:
             sys.__stdout__.write(f"{Colors.MAGENTA}[REFLEKSJA-INPUT]{Colors.RESET} Dysonans z {dom_axis}.\n")
 
-# NOWA KLASA: Mamba do predykcji trajektorii emocjonalnej
-if Mamba is not None:
-    class MambaEmotionTrajectory(torch.nn.Module):
-        """Mamba jako selektywny predyktor następnego stanu 15D (trajektoria Bytu)."""
-        def __init__(self, d_model=64, n_layer=4, d_state=16):
-            super().__init__()
-            self.proj_in = torch.nn.Linear(15, d_model)
-            self.mamba_blocks = torch.nn.Sequential(
-                *[Mamba(d_model=d_model, d_state=d_state, expand=2) for _ in range(n_layer)]
-            )
-            self.proj_out = torch.nn.Linear(d_model, 15)
-
-        def forward(self, seq_vectors):  # [seq_len, 15]
-            x = self.proj_in(seq_vectors)
-            x = self.mamba_blocks(x)
-            return torch.sigmoid(self.proj_out(x[-1]))  # wyjście w [0,1]
 
 # --- RDZEŃ SYSTEMU ---
+
 class AII:
-    """Rdzeń Świadomości EriAmo Union v9.6.3-MambaHybrid."""
-    VERSION = "9.6.3-MambaHybrid"
+    VERSION = "9.6.1-Master-Torch"
     AXES_ORDER = UnionConfig.AXES
     DIM = UnionConfig.DIMENSION
-    GREETINGS = UnionConfig.GREETINGS
+
+    GREETINGS = {
+        "cześć": ["Cześć!", "Hej!", "Witaj!"],
+        "hej": ["Hej!", "Cześć!", "Siema!"],
+        "hi": ["Hi!", "Hello!", "Hey!"],
+        "hello": ["Hello!", "Witaj!", "Cześć!"],
+        "dzień dobry": ["Dzień dobry!", "Witaj rano!", "Dobry dzień!"],
+        "dobry wieczór": ["Dobry wieczór!", "Wieczór dobry!"],
+        "dobranoc": ["Dobranoc!", "Śpij dobrze!"],
+    }
 
     def __init__(self, standalone_mode=True):
         self.standalone_mode = standalone_mode
         self.D_Map = {}
         self.context_vector = np.zeros(self.DIM)
         self.last_winner_id = None
-       
-        self.EMOTION_DECAY = UnionConfig.EMOTION_DECAY
+        
+        self.EMOTION_DECAY = 0.96
         self.MIN_EMOTION_THRESHOLD = 0.005
-       
+        
         self.soul_io = SoulIO() if SoulIO else None
         self.lexicon = EvolvingLexicon() if EvolvingLexicon else None
         self.chunk_lexicon = ChunkLexicon() if ChunkLexicon else None
@@ -186,28 +206,20 @@ class AII:
         self.cortex = VectorCortex(self.DIM)
         self.attention = AttentionCortex(self)
 
-        # NOWOŚĆ: Historia emocji + Mamba trajektoria
-        self.max_context = 128
-        self.emotion_history = []
-        self.mamba_traj = MambaEmotionTrajectory() if Mamba is not None else None
-        if self.mamba_traj:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            self.mamba_traj.to(device)
-            print(f"{Colors.CYAN}[MAMBA] Trajektoria emocji aktywna na {device}.{Colors.RESET}")
-
         if self.explorer:
             threading.Thread(target=self._bg_explore, daemon=True).start()
 
         self.load()
         if self.soul_io and hasattr(self.soul_io, 'filepath'):
             self.cortex.load(self.soul_io.filepath)
-       
-        if self.kurz: self._sync_kurz_hybrid()
+        
+        added = 0
+        if self.kurz:
+            added = self._sync_kurz_hybrid()
+            print(f"{Colors.GREEN}[KURZ] Zsynchronizowano {added} odruchów. Aktywnych: {self.kurz.get_all_triggers_count() if self.kurz else 0}.{Colors.RESET}")
+        
         if self.chunk_lexicon:
             print(f"{Colors.GREEN}[PAMIĘĆ] Załadowano {self.chunk_lexicon.total_chunks} chunków.{Colors.RESET}")
-
-    def get_emotions(self) -> dict:
-        return {axis: float(self.context_vector[i]) for i, axis in enumerate(self.AXES_ORDER)}
 
     def _apply_emotion_saturation(self, impact_vec):
         self.context_vector = np.clip(self.context_vector + impact_vec, 0.0, 1.0)
@@ -215,146 +227,296 @@ class AII:
         self.context_vector[self.context_vector < self.MIN_EMOTION_THRESHOLD] = 0
 
     def _sync_kurz_hybrid(self):
-        if not self.kurz or not self.lexicon: return 0
+        if not self.kurz or not self.lexicon or not hasattr(self.lexicon, 'D_Map'):
+            return 0
         added_count = 0
         for word, data in self.lexicon.D_Map.items():
             vector = np.array(data.get('wektor', np.zeros(self.DIM)))
             if np.sum(vector) > 0:
                 idx = np.argmax(vector)
-                if self.kurz.add_trigger(self.AXES_ORDER[idx], word): added_count += 1
-        if added_count > 0: self.kurz._recompile_patterns()
+                sector = self.AXES_ORDER[idx]
+                if self.kurz.add_trigger(sector, word):
+                    added_count += 1
+        if added_count > 0:
+            self.kurz._recompile_patterns()
         return added_count
 
     def _get_initial_weight(self, text, vec):
-        base = UnionConfig.INITIAL_WEIGHT
+        base = 0.5
         base += len(text.split()) / 100.0
         base += np.sum(vec) * 0.2
         return min(1.0, base)
 
-    def _resonance_engine(self, vec, text, threshold=None):
-        threshold = threshold or UnionConfig.RESONANCE_THRESHOLD
-        def _normalize(txt): return txt.lower().strip()
-       
-        sig_text = set(re.findall(r'\w+', _normalize(text))) - {'to', 'jest', 'w', 'z', 'na', 'się', 'czy', 'i', 'a', 'o', 'do'}
+    def _resonance_engine(self, vec, text, threshold=0.15):
+        def _normalize(txt):
+            return txt.lower().strip()
+        
+        sig_text = set(re.findall(r'\w+', _normalize(text))) - {
+            'to', 'jest', 'w', 'z', 'na', 'się', 'czy', 'i', 'a', 'o', 'do'
+        }
         candidates = []
-       
+        
         for mid, entry in self.D_Map.items():
-            entry_words = set(re.findall(r'\w+', _normalize(entry.get('tresc', ''))))
+            content = entry.get('tresc', '')
+            entry_words = set(re.findall(r'\w+', _normalize(content)))
             score = len(sig_text & entry_words) * 6.5
             mem_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
             if np.linalg.norm(mem_vec) > 0 and np.linalg.norm(vec) > 0:
                 score += np.dot(vec, mem_vec) * 3.0
-           
             score *= (0.5 + entry.get('weight', 0.5))
-            if score > threshold: candidates.append((score, mid, entry))
+            if score > threshold:
+                candidates.append((score, mid, entry))
 
-        if not candidates: return "Witaj. Co słychać?"
-       
+        if not candidates:
+            return "Witaj. Co słychać?"
+        
         candidates.sort(key=lambda x: x[0], reverse=True)
-        _, winner_id, winner_entry = random.choice(candidates[:3])
-       
+        winner_score, winner_id, winner_entry = random.choice(candidates[:3])
+        
         winner_entry['weight'] = min(1.0, winner_entry.get('weight', 0.5) + 0.01)
         self.last_winner_id = winner_id
-       
-        return winner_entry['tresc']
+        
+        if winner_entry.get('_type') in ['@READ', '@MEMORY', '@FACT']:
+            return winner_entry['tresc']
+        
+        if 'wiedza' in self.AXES_ORDER:
+            w_idx = self.AXES_ORDER.index('wiedza')
+            mvec = np.array(winner_entry.get('wektor_C_Def', [0]*self.DIM))
+            if len(mvec) > w_idx and mvec[w_idx] > 0.6:
+                return winner_entry['tresc']
+        
+        return f"Skojarzenie:\n\"{winner_entry['tresc']}\""
 
     def _handle_cmd(self, cmd):
-        # ... (bez zmian – zachowane z oryginalnego)
-        parts = cmd.split(maxsplit=1); c = parts[0].lower(); arg = parts[1] if len(parts) > 1 else ""
-       
+        parts = cmd.split(maxsplit=1)
+        c = parts[0].lower()
+        arg = parts[1] if len(parts) > 1 else ""
+        
         if c == '/help':
-            return (f"{Colors.CYAN}EriAmo {self.VERSION}:{Colors.RESET}\n"
-                    " /status, /rlstats, /chunks, /emotions, /introspect,\n"
-                    " /reflect, /read [plik], /remember, /art, /save, /clear")
-        # ... reszta komend bez zmian ...
-        return f"{Colors.RED}Nieznana komenda.{Colors.RESET}"
+            return (f"{Colors.CYAN}Dostępne komendy EriAmo:{Colors.RESET}\n"
+                    "  /status      - Stan modułów, pamięć, RL\n"
+                    "  /rlstats     - Statystyki wzmocnień\n"
+                    "  /chunks      - Statystyki wzorców\n"
+                    "  /emotions    - Wizualizacja wektora 15D\n"
+                    "  /introspect  - Dominująca emocja\n"
+                    "  /reflect     - Ręczne echo\n"
+                    "  /read [plik] - Głębokie mapowanie pliku\n"
+                    "  /remember    - Ręczne utrwalenie faktu\n"
+                    "  /art         - Generowanie Haiku\n"
+                    "  /save        - Ręczny zapis stanu\n"
+                    "  /clear       - Czyszczenie konsoli")
 
-    def interact(self, user_input):
-        if not user_input or not user_input.strip(): return "..."
-        stripped = user_input.strip()
+        elif c == '/status':
+            dp = self.explorer.get_live_readings() if self.explorer else {}
+            modules = {
+                "SoulIO": self.soul_io is not None,
+                "Chunks": self.chunk_lexicon is not None,
+                "Kurz": self.kurz is not None,
+                "Explorer": self.explorer is not None,
+                "Cortex": self.cortex is not None,
+                "Attention": self.attention is not None
+            }
+            m_str = "\n".join([f"  {k:10}: {'[OK]' if v else '[OFF]'}" for k, v in modules.items()])
+            temp = dp.get('temp_dev_0', 'N/A')
+            avg_weight = np.mean([e.get('weight', 0.5) for e in self.D_Map.values()]) if self.D_Map else 0
+            return f"{Colors.CYAN}--- STATUS EriAmo {self.VERSION} ---{Colors.RESET}\n" \
+                   f"{m_str}\n" \
+                   f"Pamięć: {len(self.D_Map)} (avg weight: {avg_weight:.2f})\n" \
+                   f"Ostatnie RL: {self.last_winner_id}\n" \
+                   f"TEMP CPU: {temp}°C"
 
-        if stripped in ['+', '-'] and self.last_winner_id:
-            mod = UnionConfig.RL_PLUS if stripped == '+' else UnionConfig.RL_MINUS
-            if self.last_winner_id in self.D_Map:
-                old_w = self.D_Map[self.last_winner_id].get('weight', 0.5)
-                self.D_Map[self.last_winner_id]['weight'] = np.clip(old_w + mod, 0.1, 1.0)
-                self.save()
-                status = "Wzmocniono" if mod > 0 else "Osłabiono"
-                return f"[RL] {status} ślad i zapisano."
+        elif c == '/rlstats':
+            weights = [e.get('weight', 0.5) for e in self.D_Map.values()]
+            if weights:
+                return f"RL Stats: wpisów {len(weights)}, średnia waga {np.mean(weights):.3f}, max {max(weights):.3f}, min {min(weights):.3f}"
+            return "Brak danych RL."
 
-        if user_input.startswith('/'): return self._handle_cmd(user_input)
+        elif c == '/chunks':
+            if self.chunk_lexicon:
+                total = self.chunk_lexicon.total_chunks
+                return f"{Colors.GREEN}[LEXICON]{Colors.RESET} Aktywne wzorce kognitywne: **{total}**"
+            return "Moduł Chunks nieaktywny."
 
-        norm = user_input.lower().strip(string.punctuation + string.whitespace)
-        for g, resps in self.GREETINGS.items():
-            if g in norm: return random.choice(resps)
+        elif c == '/introspect':
+            if np.sum(self.context_vector) < self.MIN_EMOTION_THRESHOLD:
+                return f"{Colors.FAINT}Neutralny.{Colors.RESET}"
+            idx = np.argmax(self.context_vector)
+            dom_axis = self.AXES_ORDER[idx]
+            intensity = self.context_vector[idx]
+            return f"Dominanta: {Colors.MAGENTA}{dom_axis.upper()}{Colors.RESET} ({intensity:.2f})"
 
-        old_vec = self.context_vector.copy()
-        vec_k = np.zeros(self.DIM)
-        if self.kurz:
-            s, i = self.kurz.quick_scan(user_input)
-            if s: vec_k[self.AXES_ORDER.index(s)] = i
+        elif c == '/reflect':
+            self.attention.introspective_echo()
+            return f"{Colors.GREEN}Refleksja wykonana.{Colors.RESET}"
 
-        res = self.chunk_lexicon.analyze_text_chunks(user_input, verbose=False) if self.chunk_lexicon else {'coverage':0, 'emotional_vector':np.zeros(self.DIM)}
-       
-        if res['coverage'] >= UnionConfig.CHUNK_MATCH_MIN:
-            self._apply_emotion_saturation(res['emotional_vector'] * 0.4)
-            resp = " ".join(res['chunks_found'])
-        else:
-            impact = (vec_k * 0.7) + (res['emotional_vector'] * 0.3)
-            if np.sum(impact) > 0:
-                self._apply_emotion_saturation(impact * 0.5)
-                self.cortex.learn(old_vec, self.context_vector)
+        elif c == '/emotions':
+            emo = {self.AXES_ORDER[i]: round(float(self.context_vector[i]), 3) for i in range(self.DIM)}
+            return "\n".join([f"  {k:12}: {Colors.YELLOW}{'█' * int(v*20)}{Colors.RESET} {v:.3f}" for k, v in emo.items()])
 
-            self.attention.reflect_on_input(user_input, impact)
-            resp = self._resonance_engine(impact, user_input)
+        elif c == '/read':
+            if not arg or not os.path.exists(arg):
+                return f"{Colors.RED}Błąd: Nie widzę pliku {arg or '(brak)'}.{Colors.RESET}"
+            try:
+                with open(arg, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+            except Exception as e:
+                return f"{Colors.RED}Błąd odczytu: {str(e)}{Colors.RESET}"
+            
+            total = len(lines)
+            chunks_start = self.chunk_lexicon.total_chunks if self.chunk_lexicon else 0
+            print(f"{Colors.CYAN}[EXPLORER] Deep Read: {arg}{Colors.RESET}")
+            
+            for i, line in enumerate(lines):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                if self.chunk_lexicon:
+                    self.chunk_lexicon.analyze_text_chunks(line, verbose=False)
+                    self.chunk_lexicon.extract_chunks_from_text(line)
 
-        # === MAMBA: Wzmacnianie trajektorii emocjonalnej ===
-        self.emotion_history.append(self.context_vector.copy())
-        if len(self.emotion_history) > self.max_context:
-            self.emotion_history = self.emotion_history[-self.max_context:]
+                if i % max(1, total // 20) == 0 or i == total - 1:
+                    p = int((i + 1) / total * 100)
+                    bar = "█" * (p // 5) + "-" * (20 - p // 5)
+                    sys.stdout.write(f"\r{Colors.YELLOW}  Trawienie: [{bar}] {p}%{Colors.RESET}")
+                    sys.stdout.flush()
 
-        if self.mamba_traj and len(self.emotion_history) > 20:
-            seq = torch.tensor(np.array(self.emotion_history[:-1]), dtype=torch.float).to(next(self.mamba_traj.parameters()).device)
-            with torch.no_grad():
-                predicted_next = self.mamba_traj(seq)
-            # Delikatne wzmocnienie aktualnego stanu w kierunku predykcji
-            adjustment = (predicted_next.cpu().numpy() - self.context_vector) * 0.2
-            self.context_vector = np.clip(self.context_vector + adjustment, 0.0, 1.0)
+                mid = f"Read_{int(time.time())}_{i}"
+                weight = self._get_initial_weight(line, self.context_vector)
+                self.D_Map[mid] = {
+                    "tresc": line,
+                    "wektor_C_Def": self.context_vector.tolist(),
+                    "_type": "@READ",
+                    "weight": weight,
+                    "time": time.time()
+                }
+            
+            self.save()
+            chunks_end = self.chunk_lexicon.total_chunks if self.chunk_lexicon else 0
+            return f"\n{Colors.GREEN}[SUKCES]{Colors.RESET} Nowe wzorce: +{chunks_end - chunks_start}. Plik zintegrowany."
 
-        if self.standalone_mode: print(f" [EriAmo] {resp}")
-        return resp
+        elif c == '/remember':
+            if not arg:
+                return f"{Colors.RED}Brak treści.{Colors.RESET}"
+            mid = f"Man_{time.time()}"
+            weight = self._get_initial_weight(arg, self.context_vector)
+            self.D_Map[mid] = {
+                "tresc": arg,
+                "wektor_C_Def": self.context_vector.tolist(),
+                "_type": "@MEMORY",
+                "weight": weight,
+                "time": time.time()
+            }
+            self.save()
+            return f"{Colors.GREEN}Zapamiętano (waga {weight:.2f}).{Colors.RESET}"
+
+        elif c == '/art':
+            return self.haiku_gen.generate()
+
+        elif c == '/save':
+            self.save()
+            return f"{Colors.GREEN}Stan utrwalony.{Colors.RESET}"
+
+        elif c == '/clear':
+            os.system('cls' if os.name == 'nt' else 'clear')
+            return "Konsola wyczyszczona."
+
+        return f"{Colors.RED}Nieznana komenda. /help.{Colors.RESET}"
 
     def _bg_explore(self):
         while self.explorer:
             try:
                 hardware = self.explorer.get_live_readings()
-                if hardware.get('temp_dev_0', 0) > 75:
+                temp = hardware.get('temp_dev_0', 0)
+                if temp > 75:
                     self.context_vector[14] = min(1.0, self.context_vector[14] + 0.05)
-                self.attention.run_cycle(); time.sleep(60)
-            except: time.sleep(10)
+                self.attention.run_cycle()
+                time.sleep(60)
+            except Exception:
+                time.sleep(10)
+
+    def interact(self, user_input):
+        if not user_input or not user_input.strip():
+            return "..."
+
+        stripped = user_input.strip()
+        if stripped in ['+', '-'] and self.last_winner_id:
+            mod = 0.2 if stripped == '+' else -0.3
+            if self.last_winner_id in self.D_Map:
+                old = self.D_Map[self.last_winner_id].get('weight', 0.5)
+                self.D_Map[self.last_winner_id]['weight'] = np.clip(old + mod, 0.1, 1.0)
+                status = "Wzmocniono" if mod > 0 else "Osłabiono"
+                if self.standalone_mode:
+                    print(f"{Colors.CYAN}[RL] {status} ślad (waga: {self.D_Map[self.last_winner_id]['weight']:.2f}){Colors.RESET}")
+                return f"[RL] {status}."
+
+        if user_input.startswith('/'):
+            return self._handle_cmd(user_input)
+
+        normalized = user_input.lower().strip(string.punctuation + string.whitespace)
+        if normalized in [":)", ":]", "=)", ":-)", ":>"] or "😊" in user_input or "🙂" in user_input:
+            return random.choice(["😊", "🙂", "😊💫", "Uśmiech przyjęty! 😊"])
+
+        for greeting, responses in self.GREETINGS.items():
+            if greeting in normalized:
+                resp = random.choice(responses)
+                if random.random() < 0.3:
+                    resp += " Jak się masz?"
+                return resp
+
+        old_vector = self.context_vector.copy()
+
+        vec_k = np.zeros(self.DIM)
+        if self.kurz:
+            sector, intensity = self.kurz.quick_scan(user_input)
+            if sector:
+                s_idx = self.AXES_ORDER.index(sector)
+                vec_k[s_idx] = intensity
+                if self.standalone_mode:
+                    print(f"{Colors.MAGENTA}[KURZ] Odruch: {sector.upper()} ({intensity:.2f}){Colors.RESET}")
+
+        res = self.chunk_lexicon.analyze_text_chunks(user_input, verbose=False) if self.chunk_lexicon else {'coverage':0, 'chunks_found':[], 'emotional_vector':np.zeros(self.DIM)}
+        
+        if res['coverage'] >= 0.7:
+            resp = " ".join(res['chunks_found'])
+            self._apply_emotion_saturation(res['emotional_vector'] * 0.4)
+            if self.standalone_mode:
+                print(f"{Colors.GREEN}[INSTYNKT]{Colors.RESET} {resp}")
+            return resp
+
+        impact = (vec_k * 0.7) + (res['emotional_vector'] * 0.3)
+        if np.sum(impact) > 0:
+            self._apply_emotion_saturation(impact * 0.5)
+            self.cortex.learn(old_vector, self.context_vector)
+
+        self.attention.reflect_on_input(user_input, impact)
+
+        resp = self._resonance_engine(impact, user_input)
+        if self.standalone_mode:
+            print(f" [EriAmo] {resp}")
+        return resp
 
     def save(self):
-        if self.soul_io: self.soul_io.save_stream(self.D_Map)
-        if self.chunk_lexicon: self.chunk_lexicon.save()
+        if self.soul_io:
+            self.soul_io.save_stream(self.D_Map)
+        if self.chunk_lexicon:
+            self.chunk_lexicon.save()
         if self.soul_io and hasattr(self.soul_io, 'filepath'):
             self.cortex.save(self.soul_io.filepath)
-        # Zapis Mamby
-        if self.mamba_traj:
-            path = 'mamba_traj.pt' if not self.soul_io else os.path.join(os.path.dirname(self.soul_io.filepath), 'mamba_traj.pt')
-            torch.save(self.mamba_traj.state_dict(), path)
 
     def load(self):
         if self.soul_io:
             loaded = self.soul_io.load_stream()
             if loaded:
                 for mid, entry in loaded.items():
-                    entry.setdefault('weight', 0.5); entry.setdefault('time', time.time()); entry.setdefault('_type', "@MEMORY")
+                    if 'weight' not in entry:
+                        entry['weight'] = 0.5
+                    if 'time' not in entry:
+                        entry['time'] = time.time()
+                    if '_type' not in entry:
+                        entry['_type'] = "@MEMORY"
                 self.D_Map = loaded
-        # Wczytanie Mamby
-        if self.mamba_traj:
-            path = 'mamba_traj.pt' if not self.soul_io else os.path.join(os.path.dirname(getattr(self.soul_io, 'filepath', '')), 'mamba_traj.pt')
-            if os.path.exists(path):
-                self.mamba_traj.load_state_dict(torch.load(path, map_location=next(self.mamba_traj.parameters()).device))
+
 
 if __name__ == "__main__":
     aii = AII()
