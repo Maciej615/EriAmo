@@ -1,4 +1,9 @@
-#emotional_interference.py
+# emotional_interference.py
+
+import numpy as np
+from typing import Dict
+from quantum_emotions import QuantumEmotionalState
+
 
 class EmotionalInterference:
     """
@@ -54,22 +59,12 @@ class EmotionalInterference:
                           time_step: float = 0.1) -> QuantumEmotionalState:
         """
         Zastosuj interference - emocje wpływają na siebie
-        
-        Args:
-            state: obecny stan emocjonalny
-            time_step: jak długo trwa interference
-        
-        Returns:
-            Nowy stan po interference
         """
         new_state = QuantumEmotionalState()
         
         for emotion in state.DIMENSIONS:
-            # Obecna amplituda
             current_amp = state.amplitudes[emotion]
-            
-            # Wpływ INNYCH emocji na tę
-            influence = 0j  # complex
+            influence = 0j
             
             for other_emotion in state.DIMENSIONS:
                 if other_emotion == emotion:
@@ -77,11 +72,8 @@ class EmotionalInterference:
                 
                 other_amp = state.amplitudes[other_emotion]
                 coupling = self.interference_matrix[other_emotion][emotion]
-                
-                # Interference term
                 influence += coupling * other_amp * time_step
             
-            # Nowa amplituda = stara + wpływ
             new_state.amplitudes[emotion] = current_amp + influence
         
         new_state.normalize()
@@ -90,48 +82,19 @@ class EmotionalInterference:
     def resonance_strength(self, state: QuantumEmotionalState) -> float:
         """
         Mierz jak "rezonujące" są emocje
-        
-        High resonance = emocje się wspierają (coherent)
-        Low resonance = emocje w konflikcie (decoherent)
         """
         total_resonance = 0.0
         
         for em1 in state.DIMENSIONS:
             for em2 in state.DIMENSIONS:
-                if em1 >= em2:  # Avoid double counting
+                if em1 >= em2:
                     continue
                 
                 amp1 = state.amplitudes[em1]
                 amp2 = state.amplitudes[em2]
                 coupling = self.interference_matrix[em1][em2]
                 
-                # Interference term (faza ma znaczenie!)
                 interference = np.real(amp1 * np.conj(amp2)) * coupling
                 total_resonance += interference
         
         return total_resonance
-
-
-def test_interference():
-    """Test interference patterns"""
-    
-    state = QuantumEmotionalState()
-    
-    # Set conflicting emotions
-    state.set_emotion('joy', 0.7, phase=0.0)
-    state.set_emotion('fear', 0.5, phase=np.pi)  # π difference!
-    
-    print("Initial state:", state)
-    
-    interference = EmotionalInterference()
-    resonance = interference.resonance_strength(state)
-    print(f"Resonance: {resonance:.3f}")
-    
-    # Evolve with interference
-    print("\nEvolution over time:")
-    for t in range(10):
-        state = interference.apply_interference(state, time_step=0.1)
-        print(f"t={t}: {state.dominant_emotion()}")
-
-if __name__ == "__main__":
-    test_interference()
