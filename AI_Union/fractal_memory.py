@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-fractal_memory.py v1.0.3 – stabilna wersja z poprawionym proustian_recall (05.02.2026)
+fractal_memory.py v1.0.4 – FIXED VERSION (05.02.2026)
+POPRAWKI:
+- Domyślna ścieżka: data/eriamo.soul (nie eriamo.soul)
+- integrate_fractal_memory: nie wywołuje original_load() (łamało referencję)
+- Migracja wspomnień z AII do Fractal przy integracji
 """
 
 import numpy as np
@@ -68,9 +72,10 @@ class ResonanceMetadata:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class FractalMemory:
-    VERSION = "1.0.3"
+    VERSION = "1.0.4"
 
-    def __init__(self, soul_file: str = "eriamo.soul", verbose: bool = False):
+    # POPRAWKA: Domyślna ścieżka to data/eriamo.soul
+    def __init__(self, soul_file: str = "data/eriamo.soul", verbose: bool = False):
         self.soul_file = soul_file
         self.verbose = verbose
 
@@ -92,7 +97,7 @@ class FractalMemory:
 
         if self.verbose:
             stats = self.get_statistics()
-            print(f"{Colors.CYAN}[FRACTAL] v{self.VERSION} zainicjalizowana – {stats['total']} wspomnień{Colors.RESET}")
+            print(f"{Colors.CYAN}[FRACTAL] v{self.VERSION} zainicjalizowana – {stats['total']} wspomnień (plik: {self.soul_file}){Colors.RESET}")
 
     def _clear_indices(self):
         """Resetuje wszystkie indeksy."""
@@ -110,6 +115,10 @@ class FractalMemory:
         depth = fractal.get('depth', 1)
         parent = fractal.get('parent_id')
         rec_type = record.get('_type', '@MEMORY')
+
+        # Upewnij się że depth istnieje w indeksie
+        if depth not in self._depth_index:
+            self._depth_index[depth] = set()
 
         self._depth_index[depth].add(mem_id)
         self._type_index[rec_type].add(mem_id)
@@ -156,7 +165,7 @@ class FractalMemory:
 
                 stats = self.get_statistics()
                 if self.verbose:
-                    print(f"{Colors.GREEN}[FRACTAL] Wczytano {stats['total']} wspomnień{Colors.RESET}")
+                    print(f"{Colors.GREEN}[FRACTAL] Wczytano {stats['total']} wspomnień z {self.soul_file}{Colors.RESET}")
                 return True
             except Exception as e:
                 print(f"{Colors.RED}[FRACTAL] Błąd ładowania: {e}{Colors.RESET}")
@@ -165,6 +174,11 @@ class FractalMemory:
     def save(self) -> bool:
         with self._lock:
             try:
+                # Upewnij się że katalog istnieje
+                directory = os.path.dirname(self.soul_file)
+                if directory and not os.path.exists(directory):
+                    os.makedirs(directory, exist_ok=True)
+
                 if os.path.exists(self.soul_file):
                     shutil.copy2(self.soul_file, self.soul_file + ".bak")
 
@@ -178,7 +192,7 @@ class FractalMemory:
 
                 os.replace(temp_path, self.soul_file)
                 if self.verbose:
-                    print(f"{Colors.GREEN}[FRACTAL] Zapisano {len(self.D_Map)} wspomnień{Colors.RESET}")
+                    print(f"{Colors.GREEN}[FRACTAL] Zapisano {len(self.D_Map)} wspomnień do {self.soul_file}{Colors.RESET}")
                 return True
             except Exception as e:
                 print(f"{Colors.RED}[FRACTAL] Błąd zapisu: {e}{Colors.RESET}")
@@ -262,42 +276,73 @@ class FractalMemory:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# INTEGRACJA Z AII
+# INTEGRACJA Z AII - POPRAWIONA WERSJA
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def integrate_fractal_memory(aii_instance, soul_file: str = "eriamo.soul"):
+def integrate_fractal_memory(aii_instance, soul_file: str = "data/eriamo.soul"):
+    """
+    Integruje FractalMemory z instancją AII.
+    
+    POPRAWKI v1.0.4:
+    - Migracja istniejących wspomnień z AII do Fractal
+    - NIE wywołuje original_load() (to łamało referencję D_Map)
+    - Tylko Fractal zapisuje do .soul (unika podwójnego zapisu)
+    """
+    print(f"{Colors.CYAN}[FRACTAL] Integracja z plikiem: {soul_file}{Colors.RESET}")
+    
     fractal = FractalMemory(soul_file, verbose=True)
+    
+    # Migruj istniejące wspomnienia z AII do Fractal (jeśli AII ma więcej)
+    if aii_instance.D_Map:
+        migrated = 0
+        for mid, record in aii_instance.D_Map.items():
+            if mid not in fractal.D_Map:
+                fractal.D_Map[mid] = record
+                fractal._index_record(mid, record)
+                migrated += 1
+        if migrated > 0:
+            print(f"{Colors.YELLOW}[FRACTAL] Zmigrowano {migrated} wspomnień z AII{Colors.RESET}")
+    
+    # KRYTYCZNE: Wspólna referencja - AII używa tego samego D_Map co Fractal
     aii_instance.D_Map = fractal.D_Map
     aii_instance.fractal_memory = fractal
 
-    original_save = getattr(aii_instance, 'save', lambda: None)
-    original_load = getattr(aii_instance, 'load', lambda: None)
-
     def new_save():
+        """Zapisuje pamięć - tylko Fractal zapisuje do .soul"""
         fractal.save()
-        original_save()
+        
+        # Zapisz pozostałe komponenty (chunki, cortex)
+        if aii_instance.chunk_lexicon:
+            aii_instance.chunk_lexicon.save()
+        if hasattr(aii_instance, 'cortex') and aii_instance.soul_io and hasattr(aii_instance.soul_io, 'filepath'):
+            aii_instance.cortex.save(aii_instance.soul_io.filepath)
+        
+        print(f"{Colors.GREEN}[SAVE] Zapisano {len(fractal.D_Map)} wspomnień{Colors.RESET}")
 
     def new_load():
+        """Ładuje pamięć - tylko z Fractal"""
         fractal.load()
-        aii_instance.D_Map = fractal.D_Map
-        original_load()
+        aii_instance.D_Map = fractal.D_Map  # Utrzymaj wspólną referencję!
+        # NIE wywołujemy original_load() - to nadpisywało D_Map nowym obiektem!
+        print(f"{Colors.GREEN}[LOAD] Wczytano {len(fractal.D_Map)} wspomnień{Colors.RESET}")
 
     aii_instance.save = new_save
     aii_instance.load = new_load
 
     stats = fractal.get_statistics()
-    print(f"{Colors.GREEN}[FRACTAL] Załadowano {stats['total']} wspomnień{Colors.RESET}")
+    print(f"{Colors.GREEN}[FRACTAL] Zintegrowano - {stats['total']} wspomnień aktywnych{Colors.RESET}")
     return fractal
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TEST – teraz działa bez błędu shape
+# TEST
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    print(f"\n{Colors.CYAN}TEST FractalMemory v1.0.3{Colors.RESET}")
+    print(f"\n{Colors.CYAN}TEST FractalMemory v1.0.4{Colors.RESET}")
     
-    mem = FractalMemory("test.soul", verbose=True)
+    # Test z domyślną ścieżką
+    mem = FractalMemory("test_fractal.soul", verbose=True)
     
     mem.store(
         content="Test miłości",
@@ -315,10 +360,16 @@ if __name__ == "__main__":
     print(mem.get_statistics())
     
     print("\nProustian recall (miłość):")
-    recalled = mem.proustian_recall(np.array([0,0,0,0,0.9,0,0,0]))  # 8D → automatycznie rozszerzone do 15D
+    recalled = mem.proustian_recall(np.array([0,0,0,0,0.9,0,0,0]))
     for r in recalled:
         print(f" - {r.get('tresc')} (waga: {r.get('weight')})")
     
     mem.save()
+    
+    # Cleanup
+    if os.path.exists("test_fractal.soul"):
+        os.remove("test_fractal.soul")
+    if os.path.exists("test_fractal.soul.bak"):
+        os.remove("test_fractal.soul.bak")
     
     print(f"\n{Colors.GREEN}Test zakończony.{Colors.RESET}")
