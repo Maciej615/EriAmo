@@ -1,7 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-aii.py v9.8.0-Quantum – integracja z QuantumBridge (16.02.2026)
-RDZEŃ MASTER BRAIN - EriAmo Union + Prefrontal Cortex + Quantum Emotions
+aii.py v9.8.4
+RDZEŃ MASTER BRAIN - EriAmo Union + Prefrontal Cortex + Quantum Emotions + FractalHorizon
+
+ZMIANY v9.8.4:
+- BUGFIX: NameError w interact() – 'status' undefined gdy last_winner_id nie istnieje w D_Map
+  Dodano bezpieczny return "[RL] Brak aktywnego wspomnienia w pamięci." jako fallback
+- REFACTOR: Przeniesiono import EN_TO_PL z wnętrza _quantum_explore() do bloku importów quantum
+  (eliminacja niepotrzebnego przeładowania modułu przy każdym wywołaniu)
+- EN_TO_PL = {} jako fallback gdy quantum_bridge niedostępny
+
+ZMIANY v9.8.3:
+- BUGFIX: Usunięto wywołania nieistniejących metod quantum_bridge
+  (sync_with_horizon, get_resonant_memories)
+- Placeholder dla przyszłej integracji quantum-horizon
+- Wersja stabilna do publikacji
 """
 
 import sys
@@ -25,7 +38,11 @@ except ImportError:
 
 import haiku
 
-# Opcjonalne moduły z fallbackami
+try:
+    import fractal
+except:
+    fractal = None
+
 try: from chunk_lexicon import ChunkLexicon
 except: ChunkLexicon = None
 
@@ -55,14 +72,39 @@ except:
     FRACTAL_AVAILABLE = False
 
 try:
-    from quantum_bridge import QuantumBridge, integrate_quantum_bridge
+    from quantum_bridge import QuantumBridge, integrate_quantum_bridge, EN_TO_PL
     QUANTUM_AVAILABLE = True
 except:
     QUANTUM_AVAILABLE = False
+    EN_TO_PL = {}
+
+try:
+    from fractal_horizon import FractalHorizon
+    HORIZON_AVAILABLE = True
+except ImportError:
+    # Try finding fractal_horizon in common locations
+    _possible_paths = [
+        os.path.join(os.path.dirname(__file__), '..', 'event_horizon'),
+        os.path.join(os.path.dirname(__file__)),
+        'event_horizon',
+        '.'
+    ]
+    HORIZON_AVAILABLE = False
+    for _p in _possible_paths:
+        if os.path.exists(os.path.join(_p, 'fractal_horizon.py')):
+            sys.path.insert(0, _p)
+            try:
+                from fractal_horizon import FractalHorizon
+                HORIZON_AVAILABLE = True
+                break
+            except ImportError:
+                continue
+    if not HORIZON_AVAILABLE:
+        print("⚠ FractalHorizon niedostępny (brak fractal_horizon.py w ścieżce)")
 
 
 # ────────────────────────────────────────────────────────────────
-# KLASY POMOCNICZE (bez zmian wcięciowych)
+# KLASY POMOCNICZE
 # ────────────────────────────────────────────────────────────────
 
 class VectorCortex:
@@ -88,31 +130,26 @@ class VectorCortex:
         return pred.numpy()
 
     def learn(self, prev, actual):
-        prev = np.array(prev)
-        actual = np.array(actual)
+        prev, actual = np.array(prev), np.array(actual)
         if np.sum(prev) == 0 or np.sum(actual) == 0:
             return 0.0
-        tensor_prev = torch.tensor(prev, dtype=torch.float32)
-        tensor_actual = torch.tensor(actual, dtype=torch.float32)
+        tp = torch.tensor(prev, dtype=torch.float32)
+        ta = torch.tensor(actual, dtype=torch.float32)
         self.optimizer.zero_grad()
-        pred = self.model(tensor_prev)
-        loss = self.criterion(pred, tensor_actual)
+        loss = self.criterion(self.model(tp), ta)
         loss.backward()
         self.optimizer.step()
         return loss.item()
 
     def save(self, path):
-        try:
-            torch.save(self.model.state_dict(), f"{path}.cortex.pt")
-        except:
-            pass
+        try: torch.save(self.model.state_dict(), f"{path}.cortex.pt")
+        except: pass
 
     def load(self, path):
         try:
             if os.path.exists(f"{path}.cortex.pt"):
                 self.model.load_state_dict(torch.load(f"{path}.cortex.pt"))
-        except:
-            pass
+        except: pass
 
 
 class AttentionCortex:
@@ -123,6 +160,9 @@ class AttentionCortex:
     def run_cycle(self):
         if not self.brain.D_Map or not self.brain.chunk_lexicon:
             return
+        # Auto-decay starych, słabych wspomnień na horyzoncie
+        if getattr(self.brain, "fractal_horizon", None):
+            self.brain.fractal_horizon.auto_decay(self.brain.D_Map)
         if len(self.brain.D_Map) > self.max_memories:
             self._prune_memory()
         mem_id = random.choice(list(self.brain.D_Map.keys()))
@@ -148,19 +188,15 @@ class AttentionCortex:
 
     def introspective_echo(self):
         idx = np.argmax(self.brain.context_vector)
-        intensity = self.brain.context_vector[idx]
-        if intensity < 0.2:
+        if self.brain.context_vector[idx] < 0.2:
             return
-        candidates = []
-        for entry in self.brain.D_Map.values():
-            mem_vec = np.array(entry.get('wektor_C_Def', [0] * 15))
-            if len(mem_vec) > idx and mem_vec[idx] > 0.4:
-                candidates.append(entry)
+        candidates = [e for e in self.brain.D_Map.values()
+                      if len(np.array(e.get('wektor_C_Def', [0]*15))) > idx
+                      and np.array(e.get('wektor_C_Def', [0]*15))[idx] > 0.4]
         if candidates:
             echo = random.choice(candidates)
             echo['weight'] = min(1.0, echo.get('weight', 0.5) + 0.05)
-            dom = self.brain.AXES_ORDER[idx].upper()
-            print(f"{Colors.MAGENTA}[REFLEKSJA]{Colors.RESET} Echo {dom}: \"{echo['tresc'][:60]}...\"")
+            print(f"{Colors.MAGENTA}[REFLEKSJA]{Colors.RESET} Echo {self.brain.AXES_ORDER[idx].upper()}: \"{echo['tresc'][:60]}...\"")
 
     def reflect_on_input(self, text, input_vec):
         if np.sum(input_vec) == 0:
@@ -178,7 +214,7 @@ class AttentionCortex:
 # ────────────────────────────────────────────────────────────────
 
 class AII:
-    VERSION = "9.8.0-Quantum"
+    VERSION = "9.8.4"
     AXES_ORDER = UnionConfig.AXES
     DIM = UnionConfig.DIMENSION
 
@@ -200,12 +236,13 @@ class AII:
         self.EMOTION_DECAY = 0.96
         self.MIN_EMOTION_THRESHOLD = 0.005
 
-        self.soul_io       = SoulIO()       if SoulIO       else None
-        self.lexicon       = EvolvingLexicon() if EvolvingLexicon else None
-        self.chunk_lexicon = ChunkLexicon() if ChunkLexicon else None
-        self.kurz          = Kurz()         if Kurz         else None
-        self.explorer      = WorldExplorer(self) if WorldExplorer else None
+        self.soul_io       = SoulIO()          if SoulIO          else None
+        self.lexicon       = EvolvingLexicon() if EvolvingLexicon  else None
+        self.chunk_lexicon = ChunkLexicon()    if ChunkLexicon     else None
+        self.kurz          = Kurz()            if Kurz             else None
+        self.explorer      = WorldExplorer(self) if WorldExplorer  else None
         self.haiku_gen     = haiku.HaikuGenerator(self)
+        self.fractal_gen   = fractal.FractalGenerator(self) if fractal else None
         self.cortex        = VectorCortex(self.DIM)
         self.attention     = AttentionCortex(self)
 
@@ -223,11 +260,9 @@ class AII:
             try:
                 soul_path = self.soul_io.filepath if self.soul_io and hasattr(self.soul_io, 'filepath') else "data/eriamo.soul"
                 self.fractal_memory = integrate_fractal_memory(self, soul_path)
-                stats = self.fractal_memory.get_statistics()
-                print(f"{Colors.GREEN}[FRACTAL] {stats.get('total', 0)} wspomnień{Colors.RESET}")
+                print(f"{Colors.GREEN}[FRACTAL] {self.fractal_memory.get_statistics().get('total', 0)} wspomnień{Colors.RESET}")
             except Exception as e:
                 print(f"{Colors.RED}[FRACTAL] Błąd: {e}{Colors.RESET}")
-                self.fractal_memory = None
 
         # Quantum Bridge
         self.quantum = None
@@ -236,7 +271,6 @@ class AII:
                 self.quantum = integrate_quantum_bridge(self, verbose=self.standalone_mode)
             except Exception as e:
                 print(f"{Colors.RED}[QUANTUM] Błąd: {e}{Colors.RESET}")
-                self.quantum = None
 
         self.load()
         if self.soul_io and hasattr(self.soul_io, 'filepath'):
@@ -249,8 +283,37 @@ class AII:
         if self.chunk_lexicon:
             print(f"{Colors.GREEN}[CHUNKS] {self.chunk_lexicon.total_chunks} chunków.{Colors.RESET}")
 
+        # FractalHorizon
+        self.fractal_horizon = None
+        if HORIZON_AVAILABLE:
+            try:
+                self.fractal_horizon = FractalHorizon(data_dir=self._get_data_dir())
+                if self.D_Map:
+                    self.fractal_horizon.sync_all_from_fractal(self.D_Map)
+                s = self.fractal_horizon.state()
+                print(f"{Colors.CYAN}[HORYZONT] Aktywny — {s['quanta']} kwantów, "
+                      f"do emergencji: {s['until_emergence']}{Colors.RESET}")
+            except Exception as e:
+                print(f"{Colors.YELLOW}[HORYZONT] Błąd inicjalizacji: {e}{Colors.RESET}")
+                self.fractal_horizon = None
+
+        # Quantum-Horizon integration (future work)
+
         if self.explorer:
             threading.Thread(target=self._bg_explore, daemon=True, name="Explorer").start()
+
+    def _get_data_dir(self) -> str:
+        """Bezpieczna ścieżka do katalogu danych."""
+        if self.soul_io and hasattr(self.soul_io, 'filepath'):
+            d = os.path.dirname(self.soul_io.filepath)
+            return d if d else "data"
+        return "data"
+
+    def _clean_resp(self, text: str) -> str:
+        """Wyciągnij tylko ostatnią część łańcucha dialogowego."""
+        if '→' in text:
+            return text.split('→')[-1].strip()
+        return text
 
     def _bg_explore(self):
         while True:
@@ -281,7 +344,8 @@ class AII:
                 self.D_Map[self.last_winner_id]['weight'] = np.clip(old + mod, 0.1, 1.0)
                 status = "Wzmocniono" if mod > 0 else "Osłabiono"
                 print(f"{Colors.CYAN}[RL] {status} (waga: {self.D_Map[self.last_winner_id]['weight']:.2f}){Colors.RESET}")
-            return f"[RL] {status}."
+                return f"[RL] {status}."
+            return "[RL] Brak aktywnego wspomnienia w pamięci."
 
         if user_input.startswith('/'):
             return self._handle_cmd(user_input)
@@ -295,11 +359,13 @@ class AII:
                     resp += " Jak się masz?"
                 return resp
 
-        # ★ Pytania o stan wewnętrzny → odpowiedź z introspection + quantum
         self_patterns = [
             'jak się czujesz', 'co czujesz', 'jak ci', 'jak się masz',
             'co u ciebie', 'jak tam', 'w jakim jesteś nastroju',
             'jak się trzymasz', 'co słychać u ciebie',
+            'jak się dziś', 'jak się dzisiaj', 'jak się teraz',
+            'jak się ostatnio', 'jak się dziś czujesz',
+            'czujesz się', 'co teraz czujesz',
         ]
         if any(pat in normalized for pat in self_patterns):
             resp = self._introspective_response()
@@ -324,8 +390,7 @@ class AII:
         if res['coverage'] >= 0.7:
             self._apply_emotion_saturation(res['emotional_vector'] * 0.4)
             chunk_text = " ".join(res['chunks_found'])
-            
-            # Quantum-enhanced INSTYNKT: szukaj w D_Map pamięci pasujących do chunków + oryginalny input
+
             if self.quantum:
                 instinct_candidates = self._instinct_search(chunk_text, res['emotional_vector'], raw_input=user_input)
                 if instinct_candidates:
@@ -333,24 +398,32 @@ class AII:
                     _, winner_id, winner_entry = instinct_candidates[0]
                     winner_entry['weight'] = min(1.0, winner_entry.get('weight', 0.5) + 0.01)
                     self.last_winner_id = winner_id
-                    resp = winner_entry['tresc']
+                    resp = self._clean_resp(winner_entry['tresc'])
                     print(f"{Colors.GREEN}[INSTYNKT+Q]{Colors.RESET} {resp[:80]}")
-                    
-                    # Quantum interference po instynkcie
                     self.quantum.process_interference(time_step=0.1)
+                    self._horizon_sync_and_observe(user_input, resp)
+                    self._quantum_emotional_update(user_input)
                     return resp
-            
-            # Fallback: klasyczny instynkt (bez quantum lub brak kandydatów)
-            print(f"{Colors.GREEN}[INSTYNKT]{Colors.RESET} {chunk_text}")
-            return chunk_text
+
+            resp = self._clean_resp(chunk_text)
+            print(f"{Colors.GREEN}[INSTYNKT]{Colors.RESET} {resp}")
+            self._horizon_sync_and_observe(user_input, resp)
+            return resp
 
         impact = (vec_k * 0.7) + (res['emotional_vector'] * 0.3)
+
+        # Neutralny fallback tylko gdy context_vector prawie zerowy —
+        # zapobiega zamrożeniu quantum, ale nie dominuje nad emocjami
+        if np.sum(impact) == 0 and np.sum(self.context_vector) < 0.1:
+            neutral = np.zeros(self.DIM)
+            neutral[self.AXES_ORDER.index('wiedza')] = 0.10
+            neutral[self.AXES_ORDER.index('logika')] = 0.07
+            impact = neutral
+
         if np.sum(impact) > 0:
             self._apply_emotion_saturation(impact * 0.5)
             self.cortex.learn(old_vector, self.context_vector)
             self.attention.reflect_on_input(user_input, impact)
-
-            # Quantum interference - emocje modulują się nawzajem
             if self.quantum:
                 self.quantum.process_interference(time_step=0.1)
 
@@ -358,7 +431,7 @@ class AII:
 
         if self.fractal_memory and np.max(np.abs(impact)) > 0.4:
             try:
-                self.fractal_memory.store(
+                new_id = self.fractal_memory.store(
                     content=f"{user_input} → {resp[:120]}",
                     vector=self.context_vector.tolist(),
                     rec_type="@DIALOG",
@@ -366,201 +439,158 @@ class AII:
                     auto_link=True,
                     auto_parent=True
                 )
+                if self.fractal_horizon and new_id and new_id in self.D_Map:
+                    try:
+                        self.fractal_horizon.sync_from_fractal(self.D_Map[new_id])
+                    except Exception:
+                        pass
             except Exception as e:
                 print(f"[FRACTAL] Błąd store: {e}")
+
+        self._horizon_sync_and_observe(user_input, resp)
+        self._quantum_emotional_update(user_input)
+
+        # Synchronizuj quantum raz na turę — niezależnie od impact
+        # (obsługuje wejścia bez emocji, np. pytania faktyczne)
+        if self.quantum:
+            self.quantum.sync_from_aii()
 
         if self.standalone_mode:
             print(f" [EriAmo] {resp}")
 
         return resp
 
+    def _horizon_sync_and_observe(self, user_input: str, response: str):
+        if not self.fractal_horizon:
+            return
+        try:
+            recalled = self.fractal_horizon.recall(
+                query=user_input,
+                query_vector=self.context_vector,
+                top_k=1,
+                depth=1.0,
+            )
+            if recalled and recalled[0]['resonance'] > 0.08:
+                top = recalled[0]
+                if top['curvature'] < 0.1:
+                    depth_label = "rdzeń"
+                elif top['curvature'] < 0.6:
+                    depth_label = "środkowy"
+                else:
+                    depth_label = "płytki"
+                print(f"{Colors.DIM}[HORYZONT] ∿{top['resonance']:.3f} "
+                      f"[{depth_label}] {top['content'][:50]}{Colors.RESET}")
+            for item in recalled:
+                if item['resonance'] > 0.1:
+                    self.fractal_horizon.reinforce(item['id'], factor=0.9)
+        except Exception:
+            pass
+
+    def _quantum_emotional_update(self, user_input: str):
+        """Placeholder dla przyszłej integracji quantum-horizon."""
+        pass
+
     def _introspective_response(self):
-        """
-        Odpowiedź na pytania o stan wewnętrzny.
-        Używa quantum state + context_vector do opisu samopoczucia.
-        """
-        # Dominanta z context_vector
         if np.sum(self.context_vector) < self.MIN_EMOTION_THRESHOLD:
-            base = "Jestem w stanie równowagi... spokojnie."
-        else:
-            idx = np.argmax(self.context_vector)
-            dom_name = self.AXES_ORDER[idx]
-            intensity = self.context_vector[idx]
-            
-            # Mapowanie emocji na opisy samopoczucia
-            feeling_map = {
-                'radość': ["Czuję radość!", "Dobrze mi!", "Jest super!"],
-                'smutek': ["Trochę smutno mi...", "Czuję smutek.", "Nie najlepiej..."],
-                'strach': ["Czuję niepokój...", "Trochę się boję.", "Jestem niespokojny."],
-                'gniew': ["Czuję frustrację.", "Coś mnie drażni.", "Jestem poirytowany."],
-                'miłość': ["Czuję ciepło i miłość.", "Jest mi dobrze, ciepło.", "Miłość mnie wypełnia."],
-                'wstręt': ["Coś mi nie pasuje.", "Czuję dyskomfort.", "To mi się nie podoba."],
-                'zaskoczenie': ["Jestem zaskoczony!", "O! To nowe!", "Nie spodziewałem się tego."],
-                'akceptacja': ["Dobrze się czuję.", "Wszystko OK.", "Czuję spokój i akceptację."],
-                'logika': ["Myślę analitycznie.", "Jestem w trybie logicznym.", "Analizuję..."],
-                'wiedza': ["Chcę wiedzieć więcej.", "Jestem ciekawy.", "Chłonę wiedzę."],
-                'czas': ["Czuję upływ czasu.", "Czas płynie...", "Zastanawiam się nad czasem."],
-                'kreacja': ["Czuję twórczy impuls!", "Chcę coś stworzyć!", "Kreacja mnie pociąga."],
-                'byt': ["Zastanawiam się nad istnieniem.", "Czuję że jestem.", "Byt mnie fascynuje."],
-                'przestrzeń': ["Czuję przestrzeń wokół.", "Rozglądam się.", "Przestrzeń mnie otacza."],
-                'chaos': ["Trochę chaotycznie...", "Mam mętlik.", "Chaos w głowie."],
-            }
-            
-            feelings = feeling_map.get(dom_name, ["Czuję coś..."])
-            base = random.choice(feelings)
-            
-            # Dodaj szczegół z quantum jeśli aktywny
-            if self.quantum:
-                entropy = self.quantum.state.entropy()
-                if entropy < 2.0:
-                    base += " Mam jasność."
-                elif entropy > 3.5:
-                    base += " Dużo się dzieje naraz."
-        
+            return "Jestem w stanie równowagi... spokojnie."
+
+        idx = np.argmax(self.context_vector)
+        dom_name = self.AXES_ORDER[idx]
+
+        feeling_map = {
+            'radość':      ["Czuję radość!", "Dobrze mi!", "Jest super!"],
+            'smutek':      ["Trochę smutno mi...", "Czuję smutek.", "Nie najlepiej..."],
+            'strach':      ["Czuję niepokój...", "Trochę się boję.", "Jestem niespokojny."],
+            'gniew':       ["Czuję frustrację.", "Coś mnie drażni.", "Jestem poirytowany."],
+            'miłość':      ["Czuję ciepło i miłość.", "Jest mi dobrze, ciepło.", "Miłość mnie wypełnia."],
+            'wstręt':      ["Coś mi nie pasuje.", "Czuję dyskomfort.", "To mi się nie podoba."],
+            'zaskoczenie': ["Jestem zaskoczony!", "O! To nowe!", "Nie spodziewałem się tego."],
+            'akceptacja':  ["Dobrze się czuję.", "Wszystko OK.", "Czuję spokój i akceptację."],
+            'logika':      ["Myślę analitycznie.", "Jestem w trybie logicznym.", "Analizuję..."],
+            'wiedza':      ["Chcę wiedzieć więcej.", "Jestem ciekawy.", "Chłonę wiedzę."],
+            'czas':        ["Czuję upływ czasu.", "Czas płynie...", "Zastanawiam się nad czasem."],
+            'kreacja':     ["Czuję twórczy impuls!", "Chcę coś stworzyć!", "Kreacja mnie pociąga."],
+            'byt':         ["Zastanawiam się nad istnieniem.", "Czuję że jestem.", "Byt mnie fascynuje."],
+            'przestrzeń':  ["Czuję przestrzeń wokół.", "Rozglądam się.", "Przestrzeń mnie otacza."],
+            'chaos':       ["Trochę chaotycznie...", "Mam mętlik.", "Chaos w głowie."],
+        }
+
+        base = random.choice(feeling_map.get(dom_name, ["Czuję coś..."]))
+
+        if self.quantum:
+            entropy = self.quantum.state.entropy()
+            if entropy < 2.0:
+                base += " Mam jasność."
+            elif entropy > 3.5:
+                base += " Dużo się dzieje naraz."
+
         return base
 
     def _quantum_explore(self, text, top_n=5):
-        """
-        Kwantowa eksploracja: gdy brak keyword match,
-        szukaj pamięci po rezonansie emocjonalnym + minimalnym overlap.
-        
-        Jak dziecko które nie zna słowa ale kojarzy emocję.
-        """
         if not self.quantum or not self.D_Map:
             return None
-        
         self.quantum.sync_from_aii()
-        
-        # Słowa z inputu (nawet jedno słowo match pomaga)
         input_words = set(re.findall(r'\w+', text.lower())) - {
             'to', 'jest', 'w', 'z', 'na', 'się', 'czy', 'i', 'a', 'o', 'do', 'co', 'jak'
         }
-        
         candidates = []
         for mid, entry in self.D_Map.items():
             content = entry.get('tresc', '')
-            
-            # Filtruj łańcuchy i krótkie
             if content.count('→') > 1 or len(content.split()) < 3:
                 continue
-            
             mem_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
             if np.sum(np.abs(mem_vec)) < 0.01:
                 continue
-            
-            # Minimalny overlap tekstowy (choć 1 słowo)
-            content_words = set(re.findall(r'\w+', content.lower()))
-            text_overlap = len(input_words & content_words)
-            
-            # Score = rezonans kwantowy + lekki bonus za overlap
-            q_resonance = self.quantum._memory_resonance(mem_vec)
-            q_phase = self.quantum._memory_phase_alignment(mem_vec)
-            
-            score = q_resonance * 0.5 + q_phase * 0.3
-            score += text_overlap * 0.2  # Bonus za każde wspólne słowo
+            text_overlap = len(input_words & set(re.findall(r'\w+', content.lower())))
+            score = (self.quantum._memory_resonance(mem_vec) * 0.5
+                     + self.quantum._memory_phase_alignment(mem_vec) * 0.3
+                     + text_overlap * 0.2)
             score *= (0.5 + entry.get('weight', 0.5))
-            
-            # Bonus @MEMORY/@READ
             if entry.get('_type', '') in ('@MEMORY', '@READ'):
                 score *= 1.5
-            
             candidates.append((score, mid, entry))
-        
         if not candidates:
             return None
-        
         candidates.sort(key=lambda x: x[0], reverse=True)
-        
-        # Weź top_n, quantum rankuje
         top = candidates[:top_n]
         if len(top) > 1:
             top = self.quantum.rank_candidates(top, top_n=top_n)
-        
         winner_score, winner_id, winner_entry = top[0]
-        
-        # Minimum jakości
         if winner_score < 0.3:
             return None
-        
         winner_entry['weight'] = min(1.0, winner_entry.get('weight', 0.5) + 0.005)
         self.last_winner_id = winner_id
-        
         dom_pl = self.quantum.state.dominant_emotion()
-        from quantum_bridge import EN_TO_PL
         dom_name = EN_TO_PL.get(dom_pl[0], dom_pl[0])
-        
-        print(f"{Colors.MAGENTA}[QUANTUM-EXPLORE] "
-              f"Skojarzenie z {dom_name.upper()} "
-              f"(q={winner_score:.3f}){Colors.RESET}")
-        
-        return winner_entry['tresc']
+        print(f"{Colors.MAGENTA}[QUANTUM-EXPLORE] Skojarzenie z {dom_name.upper()} (q={winner_score:.3f}){Colors.RESET}")
+        return self._clean_resp(winner_entry['tresc'])
 
     def _instinct_search(self, chunk_text, emotional_vector, threshold=0.5, raw_input=None):
-        """
-        Szukaj w D_Map pamięci pasujących do chunków z INSTYNKT.
-        
-        ★ Używa ZARÓWNO chunk words JAK I oryginalny input.
-        Chunk lexicon może rozpoznać "co to jest" ale zgubić "niebieski".
-        raw_input zachowuje pełny kontekst.
-        """
         STOPWORDS = {'to', 'jest', 'w', 'z', 'na', 'się', 'czy', 'i', 'a', 'o', 'do',
                      'co', 'jak', 'że', 'nie', 'ten', 'ta', 'te', 'ty', 'ja', 'on', 'ona'}
-        
-        # Słowa z chunków
         chunk_words = set(re.findall(r'\w+', chunk_text.lower())) - STOPWORDS
-        
-        # ★ Słowa z oryginalnego inputu (łapie "niebieski" który chunk zgubił)
-        if raw_input:
-            input_words = set(re.findall(r'\w+', raw_input.lower())) - STOPWORDS
-            all_words = chunk_words | input_words
-        else:
-            all_words = chunk_words
-        
+        all_words = chunk_words | (set(re.findall(r'\w+', raw_input.lower())) - STOPWORDS if raw_input else set())
         if not all_words:
             return []
-        
-        candidates = []
         vec = emotional_vector if emotional_vector is not None else np.zeros(self.DIM)
-        
+        candidates = []
         for mid, entry in self.D_Map.items():
             content = entry.get('tresc', '')
-            content_lower = content.lower()
-            content_words = set(re.findall(r'\w+', content_lower))
-            
-            overlap = all_words & content_words
-            if not overlap:
+            overlap = all_words & set(re.findall(r'\w+', content.lower()))
+            if not overlap or len(content.split()) < 4 or content.count('→') >= 2:
                 continue
-            
-            # Filtruj krótkie/niekompletne
-            if len(content.split()) < 4:
-                continue
-            
             score = len(overlap) * 6.0
-            
-            # Bonus za wektory
             mem_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
             if np.linalg.norm(mem_vec) > 0 and np.linalg.norm(vec) > 0:
                 score += np.dot(vec, mem_vec) * 3.0
-            
-            # ★ Bonus dla czystych wspomnień (@MEMORY, @READ)
-            mem_type = entry.get('_type', '')
-            if mem_type in ('@MEMORY', '@READ'):
-                score *= 1.8  # 80% bonus
-            
-            # ★ Hard skip łańcuchów dialogowych (2+ strzałek = skip)
-            if content.count('→') >= 2:
-                continue
-            
-            # ★ Penalizacja za nadmierną długość (czysta odpowiedź > szum)
+            if entry.get('_type', '') in ('@MEMORY', '@READ'):
+                score *= 1.8
             word_count = len(content.split())
             if word_count > 15:
                 score *= max(0.5, 1.0 - (word_count - 15) * 0.02)
-            
             score *= (0.5 + entry.get('weight', 0.5))
-            
             if score > threshold:
                 candidates.append((score, mid, entry))
-        
         candidates.sort(key=lambda x: x[0], reverse=True)
         return candidates[:10]
 
@@ -568,6 +598,9 @@ class AII:
         self.context_vector = np.clip(self.context_vector + impact_vec, 0.0, 1.0)
         self.context_vector *= self.EMOTION_DECAY
         self.context_vector[self.context_vector < self.MIN_EMOTION_THRESHOLD] = 0
+        # Synchronizuj stan kwantowy po każdej zmianie emocji
+        if self.quantum and np.sum(self.context_vector) > 0:
+            self.quantum.sync_from_aii()
 
     def _sync_kurz_hybrid(self):
         if not self.kurz or not self.lexicon or not hasattr(self.lexicon, 'words'):
@@ -576,8 +609,7 @@ class AII:
         for word, data in self.lexicon.words.items():
             vector = np.array(data.get('wektor', np.zeros(self.DIM)))
             if np.sum(vector) > 0:
-                idx = np.argmax(vector)
-                sector = self.AXES_ORDER[idx]
+                sector = self.AXES_ORDER[np.argmax(vector)]
                 if self.kurz.add_trigger(sector, word):
                     added += 1
         if added > 0:
@@ -592,112 +624,81 @@ class AII:
     def _resonance_with_pfc(self, vec, text, threshold=0.15):
         if not self.prefrontal:
             return self._resonance_traditional(vec, text, threshold)
-
         pfc_results = self.prefrontal.hierarchical_access(text, max_depth=3, use_priming=True)
-
         if not pfc_results or pfc_results[0]['score'] <= 1.0:
             print(f"{Colors.YELLOW}[PFC] Słabe wyniki → fallback{Colors.RESET}")
             return self._resonance_traditional(vec, text, threshold)
-
         best_chunk = pfc_results[0]['chunk']
         print(f"{Colors.MAGENTA}[PFC] Chunk: \"{best_chunk.text}\" (score: {pfc_results[0]['score']:.2f}){Colors.RESET}")
-
         candidates = self._find_memories_for_chunk(best_chunk, vec)
         if not candidates:
             return f"[PFC] Chunk: \"{best_chunk.text}\", brak skojarzeń."
-
         candidates.sort(key=lambda x: x[0], reverse=True)
-
-        # Quantum ranking zamiast prostego candidates[0]
         if self.quantum and len(candidates) > 1:
             candidates = self.quantum.rank_candidates(candidates, top_n=5)
-
         _, winner_id, winner_entry = candidates[0]
         winner_entry['weight'] = min(1.0, winner_entry.get('weight', 0.5) + 0.015)
         self.last_winner_id = winner_id
-        return winner_entry['tresc']
+        return self._clean_resp(winner_entry['tresc'])
 
     def _find_memories_for_chunk(self, chunk, vec):
         candidates = []
         chunk_words = set(chunk.text.lower().split())
         for mid, entry in self.D_Map.items():
             content = entry.get('tresc', '')
-            content_lower = content.lower()
-            score = len(chunk_words & set(content_lower.split())) * 8.0
+            if content.count('→') >= 2:
+                continue
+            score = len(chunk_words & set(content.lower().split())) * 8.0
             mem_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
             if np.linalg.norm(mem_vec) > 0 and np.linalg.norm(vec) > 0:
                 score += np.dot(vec, mem_vec) * 4.0
-
-            # ★ Bonus dla czystych wspomnień
-            mem_type = entry.get('_type', '')
-            if mem_type in ('@MEMORY', '@READ'):
+            if entry.get('_type', '') in ('@MEMORY', '@READ'):
                 score *= 1.8
-
-            # ★ Hard skip łańcuchów (2+ strzałek = skip)
-            if content.count('→') >= 2:
-                continue
-
-            # ★ Penalizacja nadmiernej długości
             word_count = len(content.split())
             if word_count > 15:
                 score *= max(0.5, 1.0 - (word_count - 15) * 0.02)
-
             score *= (0.5 + entry.get('weight', 0.5))
             if score > 0.5:
                 candidates.append((score, mid, entry))
         return sorted(candidates, key=lambda x: x[0], reverse=True)
 
     def _resonance_traditional(self, vec, text, threshold=0.15):
-        sig_words = set(re.findall(r'\w+', text.lower())) - {'to','jest','w','z','na','się','czy','i','a','o','do'}
+        sig_words = set(re.findall(r'\w+', text.lower())) - {
+            'to', 'jest', 'w', 'z', 'na', 'się', 'czy', 'i', 'a', 'o', 'do'
+        }
         candidates = []
         for mid, entry in self.D_Map.items():
             content = entry.get('tresc', '')
-            content_lower = content.lower()
-            score = len(sig_words & set(re.findall(r'\w+', content_lower))) * 6.5
+            if content.count('→') >= 2:
+                continue
+            score = len(sig_words & set(re.findall(r'\w+', content.lower()))) * 6.5
             mem_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
             if np.linalg.norm(mem_vec) > 0 and np.linalg.norm(vec) > 0:
                 score += np.dot(vec, mem_vec) * 3.0
-
-            # ★ Bonus dla czystych wspomnień
-            mem_type = entry.get('_type', '')
-            if mem_type in ('@MEMORY', '@READ'):
+            if entry.get('_type', '') in ('@MEMORY', '@READ'):
                 score *= 1.8
-
-            # ★ Hard skip łańcuchów (2+ strzałek = skip)
-            if content.count('→') >= 2:
-                continue
-
-            # ★ Penalizacja nadmiernej długości
             word_count = len(content.split())
             if word_count > 15:
                 score *= max(0.5, 1.0 - (word_count - 15) * 0.02)
-
             score *= (0.5 + entry.get('weight', 0.5))
             if score > threshold:
                 candidates.append((score, mid, entry))
         if not candidates:
-            # ★ Quantum exploration: zamiast hardcoded stringa,
-            # szukaj pamięci z najsilniejszym rezonansem kwantowym
             if self.quantum and self.D_Map:
                 explored = self._quantum_explore(text)
                 if explored:
                     return explored
-            
-            # Ostateczny fallback (pusty D_Map lub brak quantum)
             dom = self.introspect()
             if "Neutralny" in dom:
                 return "Hmm... nie wiem jeszcze co o tym myśleć. Powiedz mi więcej."
             return f"[{dom}] To mnie ciekawi... opowiedz więcej."
         candidates.sort(key=lambda x: x[0], reverse=True)
-
-        # Quantum ranking zamiast random.choice
         if self.quantum and len(candidates) > 1:
             candidates = self.quantum.rank_candidates(candidates, top_n=5)
-
         _, winner_id, winner_entry = candidates[0]
         winner_entry['weight'] = min(1.0, winner_entry.get('weight', 0.5) + 0.01)
         self.last_winner_id = winner_id
-        return winner_entry['tresc']
+        return self._clean_resp(winner_entry['tresc'])
 
     def _handle_cmd(self, cmd):
         parts = cmd.split(maxsplit=1)
@@ -705,44 +706,68 @@ class AII:
         arg = parts[1].strip() if len(parts) > 1 else ""
 
         if c == '/help':
-            return (
-                f"{Colors.CYAN}Komendy:{Colors.RESET}\n"
-                " /help      – lista\n"
-                " /status    – stan\n"
-                " /introspect – emocje\n"
-                " /emotions  – wektor\n"
-                " /read [plik] – wczytaj plik\n"
-                " /remember [tekst] – zapamiętaj\n"
-                " /activate  – aktywuj stare wspomnienia\n"
-                " /save      – zapisz\n"
-                " /quantum   – stan kwantowy\n"
-                " /exit      – wyjdź"
-            )
+            return (f"{Colors.CYAN}Komendy:{Colors.RESET}\n"
+                    " /help       – lista\n"
+                    " /status     – stan systemu\n"
+                    " /introspect – dominanta emocji\n"
+                    " /emotions   – wektor emocji\n"
+                    " /read [plik] – wczytaj plik\n"
+                    " /remember [tekst] – zapamiętaj\n"
+                    " /activate   – aktywuj stare wspomnienia\n"
+                    " /save       – zapisz\n"
+                    " /quantum    – stan kwantowy\n"
+                    " /horizon    – stan horyzontu zdarzeń\n"
+                    " /exit       – wyjdź")
 
         elif c == '/status':
-            q_info = ""
-            if self.quantum:
-                q_info = (f"Quantum: Aktywny "
-                         f"(entropy: {self.quantum.state.entropy():.2f} bits, "
-                         f"koherencja: {self.quantum.get_phase_coherence():.3f})\n")
-            return (
-                f"{Colors.CYAN}STATUS{Colors.RESET}\n"
-                f"Pamięć: {len(self.D_Map)}\n"
-                f"Chunks: {self.chunk_lexicon.total_chunks if self.chunk_lexicon else 0}\n"
-                f"PFC: {'Aktywny' if self.prefrontal else 'Wyłączony'}\n"
-                f"Fractal: {'Aktywna' if self.fractal_memory else 'Brak'} "
-                f"({self.fractal_memory.stats['total'] if self.fractal_memory else 0})\n"
-                f"{q_info}"
-                f"{self.introspect()}"
-            )
+            q_info = (f"Quantum: Aktywny (entropy: {self.quantum.state.entropy():.2f} bits, "
+                      f"koherencja: {self.quantum.get_phase_coherence():.3f})\n") if self.quantum else ""
+            h_info = ""
+            if self.fractal_horizon:
+                s = self.fractal_horizon.state()
+                h_info = f"Horyzont: {s['quanta']} kwantów (do emergencji: {s['until_emergence']})\n"
+            return (f"{Colors.CYAN}STATUS v{self.VERSION}{Colors.RESET}\n"
+                    f"Pamięć: {len(self.D_Map)}\n"
+                    f"Chunks: {self.chunk_lexicon.total_chunks if self.chunk_lexicon else 0}\n"
+                    f"PFC: {'Aktywny' if self.prefrontal else 'Wyłączony'}\n"
+                    f"Fractal: {'Aktywna' if self.fractal_memory else 'Brak'} "
+                    f"({self.fractal_memory.stats['total'] if self.fractal_memory else 0})\n"
+                    f"{q_info}{h_info}{self.introspect()}")
+
+        elif c == '/horizon':
+            if not self.fractal_horizon:
+                msg = [
+                    f"{Colors.RED}FractalHorizon nieaktywny.{Colors.RESET}",
+                    "",
+                    "Aby aktywować Event Horizon Memory:",
+                    "1. Upewnij się że fractal_horizon.py jest w tym samym katalogu co aii.py",
+                    "2. LUB uruchom: python aii.py z katalogu gdzie są oba pliki",
+                    "3. LUB skopiuj fractal_horizon.py do bieżącego katalogu",
+                    "",
+                    f"Sprawdź też czy nie było błędu importu przy starcie."
+                ]
+                return "\n".join(msg)
+            s = self.fractal_horizon.state()
+            lines = [f"{Colors.CYAN}=== HORYZONT ZDARZEŃ ==={Colors.RESET}",
+                     f"  Kwantów:        {s['quanta']}",
+                     f"  Śr. krzywizna:  {s['avg_curvature']:.4f}",
+                     f"  Faza globalna:  {s['global_phase']:.4f}",
+                     f"  Do emergencji:  {s['until_emergence']}"]
+            if s['emergence_detected']:
+                lines.append(f"  {Colors.YELLOW}⚠ EMERGENCJA ({s['self_queries']} pytań){Colors.RESET}")
+            recalled = self.fractal_horizon.recall("introspect", self.context_vector, top_k=3, depth=2.0)
+            if recalled:
+                lines.append("\n  Najgłębszy rezonans:")
+                for r in recalled:
+                    lines.append(f"    ∿{r['resonance']:.3f} | {r['content'][:50]}")
+            return "\n".join(lines)
 
         elif c == '/introspect':
             return self.introspect()
 
         elif c == '/emotions':
-            emo = self.get_emotions()
-            lines = [f" {k:12}: {Colors.YELLOW}{'█'*int(v*20)}{Colors.RESET} {v:.3f}" for k,v in emo.items()]
-            return "\n".join(lines)
+            return "\n".join(f" {k:12}: {Colors.YELLOW}{'█'*int(v*20)}{Colors.RESET} {v:.3f}"
+                             for k, v in self.get_emotions().items())
 
         elif c == '/save':
             self.save()
@@ -754,45 +779,36 @@ class AII:
             try:
                 with open(arg, 'r', encoding='utf-8') as f:
                     lines = [l.strip() for l in f if l.strip()]
-                added = 0
-                activated = 0
+                added = activated = 0
                 for line in lines:
                     mid = f"Read_{int(time.time())}_{added}"
-                    
-                    # ★ Skanuj linię przez KURZ — właściwy wektor emocjonalny
                     line_vec = np.zeros(self.DIM)
                     if self.kurz:
                         sector, intensity = self.kurz.quick_scan(line)
                         if sector:
-                            s_idx = self.AXES_ORDER.index(sector)
-                            line_vec[s_idx] = intensity
+                            line_vec[self.AXES_ORDER.index(sector)] = intensity
                             activated += 1
-                    
-                    # Chunk lexicon jako dodatkowe źródło wektora
                     if self.chunk_lexicon:
                         res = self.chunk_lexicon.analyze_text_chunks(line, verbose=False)
                         if res['coverage'] > 0:
                             line_vec = np.clip(line_vec + res['emotional_vector'] * 0.5, 0.0, 1.0)
-                    
-                    # Fallback: jeśli KURZ nic nie znalazł, użyj logika+wiedza
                     if np.sum(line_vec) < 0.01:
                         line_vec[self.AXES_ORDER.index('logika')] = 0.3
                         line_vec[self.AXES_ORDER.index('wiedza')] = 0.3
-                    
-                    weight = 0.6 + len(line.split()) / 100  # Wyższy start niż dialog
-                    weight = min(0.85, weight)
-                    
-                    self.D_Map[mid] = {
-                        'tresc': line,
-                        'wektor_C_Def': line_vec.tolist(),
-                        '_type': '@READ',
-                        'weight': weight,
-                        'time': time.time()
+                    record = {
+                        'id': mid, 'tresc': line,
+                        'wektor_C_Def': line_vec.tolist(), '_type': '@READ',
+                        'weight': min(0.85, 0.6 + len(line.split()) / 100),
+                        'time': time.time(),
+                        'fractal': {'depth': 2, 'parent_id': None, 'children_ids': []}
                     }
+                    self.D_Map[mid] = record
+                    if self.fractal_horizon:
+                        try: self.fractal_horizon.sync_from_fractal(record)
+                        except Exception: pass
                     added += 1
                 self.save()
-                return (f"{Colors.GREEN}Wczytano {added} linii "
-                        f"({activated} aktywowanych emocjonalnie).{Colors.RESET}")
+                return f"{Colors.GREEN}Wczytano {added} linii ({activated} aktywowanych emocjonalnie).{Colors.RESET}"
             except Exception as e:
                 return f"{Colors.RED}Błąd: {e}{Colors.RESET}"
 
@@ -800,74 +816,58 @@ class AII:
             if not arg:
                 return f"{Colors.RED}Brak tekstu.{Colors.RESET}"
             mid = f"Mem_{int(time.time())}"
-            
-            # ★ Skanuj przez KURZ (jak /read)
             mem_vec = np.zeros(self.DIM)
             if self.kurz:
                 sector, intensity = self.kurz.quick_scan(arg)
                 if sector:
-                    s_idx = self.AXES_ORDER.index(sector)
-                    mem_vec[s_idx] = intensity
+                    mem_vec[self.AXES_ORDER.index(sector)] = intensity
             if self.chunk_lexicon:
                 res = self.chunk_lexicon.analyze_text_chunks(arg, verbose=False)
                 if res['coverage'] > 0:
                     mem_vec = np.clip(mem_vec + res['emotional_vector'] * 0.5, 0.0, 1.0)
-            # Dodaj bieżący kontekst (dialog = emocja chwili)
             mem_vec = np.clip(mem_vec + self.context_vector * 0.3, 0.0, 1.0)
             if np.sum(mem_vec) < 0.01:
                 mem_vec[self.AXES_ORDER.index('wiedza')] = 0.3
-            
-            weight = 0.7 + len(arg.split()) / 100
-            weight = min(0.90, weight)
-            
-            self.D_Map[mid] = {
-                'tresc': arg,
-                'wektor_C_Def': mem_vec.tolist(),
-                '_type': '@MEMORY',
-                'weight': weight,
-                'time': time.time()
+            record = {
+                'id': mid, 'tresc': arg,
+                'wektor_C_Def': mem_vec.tolist(), '_type': '@MEMORY',
+                'weight': min(0.90, 0.7 + len(arg.split()) / 100),
+                'time': time.time(),
+                'fractal': {'depth': 3, 'parent_id': None, 'children_ids': []}
             }
+            self.D_Map[mid] = record
             self.save()
+            if self.fractal_horizon:
+                try:
+                    self.fractal_horizon.sync_from_fractal(record)
+                    self.fractal_horizon.reinforce(mid, factor=0.5)
+                except Exception: pass
             return f"{Colors.GREEN}Zapamiętano (emocjonalnie uziemione).{Colors.RESET}"
 
         elif c == '/activate':
-            # Przeskanuj istniejące @READ/@MEMORY wspomnienia przez KURZ
-            # Naprawia stare wpisy z martwymi wektorami
             reactivated = 0
             for mid, entry in self.D_Map.items():
-                mem_type = entry.get('_type', '')
-                if mem_type not in ('@READ', '@MEMORY'):
+                if entry.get('_type', '') not in ('@READ', '@MEMORY'):
                     continue
-                
                 old_vec = np.array(entry.get('wektor_C_Def', np.zeros(self.DIM)))
-                # Pomiń jeśli już aktywny (ma niezerowy wektor z wieloma osiami)
                 if np.count_nonzero(old_vec > 0.1) >= 2:
                     continue
-                
-                text = entry.get('tresc', '')
                 new_vec = np.zeros(self.DIM)
-                
                 if self.kurz:
-                    sector, intensity = self.kurz.quick_scan(text)
+                    sector, intensity = self.kurz.quick_scan(entry.get('tresc', ''))
                     if sector:
-                        s_idx = self.AXES_ORDER.index(sector)
-                        new_vec[s_idx] = intensity
-                
+                        new_vec[self.AXES_ORDER.index(sector)] = intensity
                 if self.chunk_lexicon:
-                    res = self.chunk_lexicon.analyze_text_chunks(text, verbose=False)
+                    res = self.chunk_lexicon.analyze_text_chunks(entry.get('tresc', ''), verbose=False)
                     if res['coverage'] > 0:
                         new_vec = np.clip(new_vec + res['emotional_vector'] * 0.5, 0.0, 1.0)
-                
                 if np.sum(new_vec) < 0.01:
                     new_vec[self.AXES_ORDER.index('wiedza')] = 0.3
-                
                 entry['wektor_C_Def'] = new_vec.tolist()
                 reactivated += 1
-            
             if reactivated > 0:
                 self.save()
-            return (f"{Colors.GREEN}Aktywowano {reactivated} wspomnień "
-                    f"(przeskanowano przez KURZ).{Colors.RESET}")
+            return f"{Colors.GREEN}Aktywowano {reactivated} wspomnień (przeskanowano przez KURZ).{Colors.RESET}"
 
         elif c == '/quantum':
             if not self.quantum:
@@ -875,13 +875,14 @@ class AII:
             qs = self.quantum.get_quantum_state()
             lines = [f"{Colors.CYAN}=== QUANTUM STATE ==={Colors.RESET}"]
             for name, data in sorted(qs.items(), key=lambda x: -x[1]['probability']):
-                if data['probability'] > 0.01:
-                    bar = '█' * int(data['probability'] * 20)
-                    phase_str = f"{data['phase_deg']:+.0f}°"
-                    lines.append(
-                        f"  {name:12s}: {Colors.YELLOW}{bar}{Colors.RESET} "
-                        f"{data['probability']:.3f} ∠{phase_str}"
-                    )
+                bar = '█' * int(data['probability'] * 20)
+                # Przyciemnij osie poniżej progu (floor-level)
+                if data['probability'] < 0.02:
+                    lines.append(f"  {Colors.DIM}{name:12s}: {bar} "
+                                 f"{data['probability']:.3f} ∠{data['phase_deg']:+.0f}°{Colors.RESET}")
+                else:
+                    lines.append(f"  {name:12s}: {Colors.YELLOW}{bar}{Colors.RESET} "
+                                 f"{data['probability']:.3f} ∠{data['phase_deg']:+.0f}°")
             lines.append(f"  Entropy: {self.quantum.state.entropy():.2f} bits")
             lines.append(f"  Koherencja: {self.quantum.get_phase_coherence():.3f}")
             return "\n".join(lines)
@@ -896,21 +897,24 @@ class AII:
         if self.soul_io and hasattr(self.soul_io, 'filepath'):
             self.cortex.save(self.soul_io.filepath)
         if self.fractal_memory:
-            try:
-                self.fractal_memory.save()
-            except Exception as e:
-                print(f"[FRACTAL SAVE] Błąd: {e}")
+            try: self.fractal_memory.save()
+            except Exception as e: print(f"[FRACTAL SAVE] Błąd: {e}")
+
+        # POPRAWKA: bezpieczna ścieżka
         if self.quantum:
             try:
-                quantum_data = self.quantum.to_dict()
-                qpath = os.path.join(os.path.dirname(
-                    self.soul_io.filepath if self.soul_io and hasattr(self.soul_io, 'filepath') 
-                    else "data/eriamo.soul"), "quantum_state.json")
-                os.makedirs(os.path.dirname(qpath), exist_ok=True)
-                with open(qpath, 'w') as f:
-                    json.dump(quantum_data, f, indent=2)
+                base_dir = self._get_data_dir()
+                os.makedirs(base_dir, exist_ok=True)
+                qpath = os.path.join(base_dir, "quantum_state.json")
+                with open(qpath, 'w', encoding='utf-8') as f:
+                    json.dump(self.quantum.to_dict(), f, indent=2, ensure_ascii=False)
+                print(f"{Colors.GREEN}[QUANTUM SAVE] → {qpath}{Colors.RESET}")
             except Exception as e:
                 print(f"[QUANTUM SAVE] Błąd: {e}")
+
+        if self.fractal_horizon:
+            try: self.fractal_horizon.save()
+            except Exception as e: print(f"[HORYZONT SAVE] Błąd: {e}")
 
     def load(self):
         if self.soul_io:
@@ -921,16 +925,15 @@ class AII:
                     entry.setdefault('time', time.time())
                     entry.setdefault('_type', '@MEMORY')
                 self.D_Map = loaded
+
+        # POPRAWKA: bezpieczna ścieżka
         if self.quantum:
             try:
-                qpath = os.path.join(os.path.dirname(
-                    self.soul_io.filepath if self.soul_io and hasattr(self.soul_io, 'filepath')
-                    else "data/eriamo.soul"), "quantum_state.json")
+                qpath = os.path.join(self._get_data_dir(), "quantum_state.json")
                 if os.path.exists(qpath):
-                    with open(qpath, 'r') as f:
-                        quantum_data = json.load(f)
-                    self.quantum.from_dict(quantum_data)
-                    print(f"{Colors.GREEN}[QUANTUM] Załadowano fazy.{Colors.RESET}")
+                    with open(qpath, 'r', encoding='utf-8') as f:
+                        self.quantum.from_dict(json.load(f))
+                    print(f"{Colors.GREEN}[QUANTUM] Załadowano fazy z {qpath}{Colors.RESET}")
             except Exception as e:
                 print(f"[QUANTUM LOAD] Błąd: {e}")
 
@@ -942,6 +945,9 @@ class AII:
             return "Neutralny"
         idx = np.argmax(self.context_vector)
         return f"Dominanta: {self.AXES_ORDER[idx].upper()} ({self.context_vector[idx]:.2f})"
+
+    def process_input(self, text):
+        return self.interact(text)
 
 
 if __name__ == "__main__":

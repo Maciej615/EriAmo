@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
-# agency.py v2.0.0 - Autonomiczna Agencja Twórcza dla EriAmo [FULL EDITION]
+# agency.py v2.0.2 - Autonomiczna Agencja Twórcza dla EriAmo [FULL EDITION]
 """
 Moduł zarządzający autonomicznymi działaniami EriAmo
 gdy system się nudzi (brak interakcji użytkownika).
 
-NOWE w v2.0.0:
-- Integracja z systemem muzycznym
-- Inteligentny wybór aktywności (15 osi)
-- Mechanizm nudy z automatycznym wyzwalaniem
-- Rozszerzone statystyki i analiza
+NOWE w v2.0.2:
+- Wprowadzono autouważność (self-awareness): Nowy mechanizm _self_reflect(),
+  wywoływany co sesję twórczą. System introspekcjonuje swój stan emocjonalny,
+  loguje refleksję i dostosowuje boredom_threshold na podstawie kreacji/logiki.
+- FIX: _choose_fractal_pattern() — dodano obsługę wszystkich 15 osi (poprzednio
+  tylko wybrane; fallback 'spiral' dla metafizycznych).
+- REFACTOR: Zwiększono temperaturę w _choose_activity() do 1.0 (więcej eksploracji).
+- STATYSTYKI: Dodano 'reflections' do get_detailed_stats() — liczba autouważnych sesji.
 
 Autor: Maciej Mazur (GitHub: Maciej615, Medium: @drwisz)
 """
@@ -16,6 +19,7 @@ Autor: Maciej Mazur (GitHub: Maciej615, Medium: @drwisz)
 import random
 import time
 import threading
+from threading import Lock
 import numpy as np
 from union_config import Colors
 from haiku import HaikuGenerator
@@ -33,11 +37,12 @@ class CreativeAgency:
     """
     Zarządza autonomicznymi działaniami twórczymi EriAmo.
     
-    NOWE w v2.0.0:
-    - Inteligentny wybór aktywności oparty na 15 osiach
-    - System nudy z automatycznym wyzwalaniem
-    - Integracja z muzyką (kompozycja autonomiczna)
-    - Rozszerzone statystyki
+    NOWE w v2.0.2:
+    - Autouważność: System reflektuje nad swoim stanem w _self_reflect(),
+      dostosowując parametry (np. boredom_threshold) na podstawie emocji.
+    - FIX: _choose_fractal_pattern() — pełna mapa dla 15 osi.
+    - REFACTOR: Temperatura softmax w _choose_activity() = 1.0.
+    - STATYSTYKI: Dodano licznik refleksji.
     """
     
     def __init__(self, aii_instance):
@@ -71,6 +76,8 @@ class CreativeAgency:
         
         # === STATYSTYKI ===
         self.activities_log = []
+        self.reflections_log = []  # NOWE: Log refleksji dla autouważności
+        self._log_lock = Lock()
         
         # === WĄTEK AUTONOMICZNY ===
         self.running = False
@@ -103,8 +110,8 @@ class CreativeAgency:
         if self.music_available:
             scores['music'] = self._score_music(emotions)
         
-        # Softmax z temperaturą
-        temperature = 0.8
+        # Softmax z temperaturą (zwiększona do 1.0 dla więcej losowości)
+        temperature = 1.0
         exp_scores = {k: np.exp(v / temperature) for k, v in scores.items()}
         total = sum(exp_scores.values())
         probs = {k: v / total for k, v in exp_scores.items()}
@@ -145,26 +152,75 @@ class CreativeAgency:
     def _choose_fractal_pattern(self):
         """
         Wybiera typ fraktala na podstawie emocji.
-        
+
+        FIX v2.0.2: Rozszerzono mapę na wszystkie 15 osi (fallback 'spiral'
+        dla metafizycznych jak 'czas', 'byt' itp.).
+
         Returns:
             str: 'mandala', 'triangle', 'spiral'
         """
-        emotion = self.aii.introspect()
-        
         pattern_map = {
             'radość': 'mandala',
             'smutek': 'spiral',
             'strach': 'triangle',
             'gniew': 'triangle',
             'miłość': 'mandala',
-            'neutralna': 'mandala'
+            'wstręt': 'spiral',
+            'zaskoczenie': 'triangle',
+            'akceptacja': 'mandala',
+            'logika': 'mandala',
+            'wiedza': 'spiral',
+            'czas': 'spiral',
+            'kreacja': 'mandala',
+            'byt': 'spiral',
+            'przestrzeń': 'triangle',
+            'chaos': 'triangle'
         }
+
+        emotions = self.aii.get_emotions()
+        if not emotions:
+            return 'mandala'
+
+        dominant = max(emotions.items(), key=lambda x: x[1])
+        # Próg — jeśli dominanta jest zbyt słaba, fraktal neutralny
+        if dominant[1] < 0.1:
+            return 'mandala'
+
+        return pattern_map.get(dominant[0], 'spiral')
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # AUTOUWAŻNOŚĆ (SELF-AWARENESS)
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    def _self_reflect(self):
+        """
+        Mechanizm autouważności: Reflektuje nad bieżącym stanem emocjonalnym,
+        loguje refleksję i dostosowuje parametry systemu (np. boredom_threshold).
+        """
+        emotions = self.aii.get_emotions()
+        dominant = max(emotions.items(), key=lambda x: x[1])
+        reflection = f"[SELF-REFLECT] Dominanta: {dominant[0].upper()} ({dominant[1]:.2f}). "
         
-        for key in pattern_map:
-            if key.lower() in emotion.lower():
-                return pattern_map[key]
+        # Dostosowanie na podstawie emocji
+        if dominant[0] == 'kreacja' and dominant[1] > 0.5:
+            self.boredom_threshold = max(0.5, self.boredom_threshold - 0.1)
+            reflection += "Zwiększam gotowość do tworzenia (threshold ↓)."
+        elif dominant[0] == 'logika' and dominant[1] > 0.5:
+            self.boredom_threshold = min(0.9, self.boredom_threshold + 0.1)
+            reflection += "Zwiększam stabilność (threshold ↑)."
+        else:
+            reflection += "Stan zrównoważony."
         
-        return 'mandala'
+        print(f"{Colors.BLUE}{reflection}{Colors.RESET}")
+        
+        # Logowanie refleksji
+        with self._log_lock:
+            self.reflections_log.append({
+                'reflection': reflection,
+                'emotion': dominant[0],
+                'value': dominant[1],
+                'timestamp': time.time()
+            })
     
     # ═══════════════════════════════════════════════════════════════════════════
     # MECHANIZM NUDY
@@ -229,7 +285,10 @@ class CreativeAgency:
         """
         Główna metoda - uruchamia sesję twórczą.
         ROZSZERZONA o muzykę i inteligencję.
+        NOWE: Wywołuje _self_reflect() przed aktywnością.
         """
+        self._self_reflect()  # Autouważność na starcie sesji
+        
         activity = self._choose_activity()
         
         print(f"\n{Colors.CYAN}══════════════════════════════════════════════════{Colors.RESET}")
@@ -263,12 +322,13 @@ class CreativeAgency:
         print(f"{Colors.CYAN}[AUTONOMIA] Sesja zakończona. Boredom: {self.boredom_level:.2f}{Colors.RESET}\n")
         
         # Logowanie
-        self.activities_log.append({
-            'activity': activity,
-            'emotion': dominant[0],
-            'emotion_value': dominant[1],
-            'timestamp': time.time()
-        })
+        with self._log_lock:
+            self.activities_log.append({
+                'activity': activity,
+                'emotion': dominant[0],
+                'emotion_value': dominant[1],
+                'timestamp': time.time()
+            })
     
     def _compose_autonomous_music(self):
         """Komponuje muzykę na podstawie stanu emocjonalnego."""
@@ -326,52 +386,47 @@ class CreativeAgency:
     def get_stats(self):
         """
         Zwraca podstawowe statystyki.
-        
+
         Returns:
-            dict: Statystyki
+            dict: Statystyki z kluczami: total + jedna para per aktywność
         """
-        if not self.activities_log:
-            return {'total': 0, 'haiku': 0, 'fractal': 0, 'music': 0}
-        
-        total = len(self.activities_log)
-        haiku_count = sum(1 for a in self.activities_log if a['activity'] == 'haiku')
-        fractal_count = sum(1 for a in self.activities_log if a['activity'] == 'fractal')
-        music_count = sum(1 for a in self.activities_log if a['activity'] == 'music')
-        
+        detailed = self.get_detailed_stats()
+        counts = detailed.get('counts', {})
         return {
-            'total': total,
-            'haiku': haiku_count,
-            'fractal': fractal_count,
-            'music': music_count
+            'total': detailed.get('total', 0),
+            **counts  # haiku, fractal, music — i wszystkie przyszłe
         }
     
     def get_detailed_stats(self):
         """Rozszerzone statystyki z analizą."""
-        if not self.activities_log:
+        with self._log_lock:
+            log_snapshot = list(self.activities_log)
+            ref_snapshot = list(self.reflections_log)  # NOWE: Log refleksji
+        if not log_snapshot:
             return {'total': 0}
-        
-        total = len(self.activities_log)
+
+        total = len(log_snapshot)
         
         # Liczby per aktywność
         counts = {}
-        for a in self.activities_log:
+        for a in log_snapshot:
             act = a['activity']
             counts[act] = counts.get(act, 0) + 1
         
         # Analiza emocjonalna
         emotion_distribution = {}
-        for a in self.activities_log:
+        for a in log_snapshot:
             emo = a['emotion']
             emotion_distribution[emo] = emotion_distribution.get(emo, 0) + 1
         
         # Ostatnie działania
-        recent = self.activities_log[-5:]
+        recent = log_snapshot[-5:]
         
         # Aktywność w czasie
-        if len(self.activities_log) >= 2:
+        if len(log_snapshot) >= 2:
             time_diffs = [
-                self.activities_log[i]['timestamp'] - self.activities_log[i-1]['timestamp']
-                for i in range(1, len(self.activities_log))
+                log_snapshot[i]['timestamp'] - log_snapshot[i-1]['timestamp']
+                for i in range(1, len(log_snapshot))
             ]
             avg_interval = np.mean(time_diffs) / 60
         else:
@@ -383,7 +438,8 @@ class CreativeAgency:
             'emotion_distribution': emotion_distribution,
             'recent': recent,
             'avg_interval_minutes': avg_interval,
-            'current_boredom': self.boredom_level
+            'current_boredom': self.boredom_level,
+            'reflections': len(ref_snapshot)  # NOWE: Liczba refleksji
         }
     
     def print_stats_report(self):
@@ -406,3 +462,5 @@ class CreativeAgency:
         print("\nEmocje wyzwalające:")
         for emo, count in sorted(stats.get('emotion_distribution', {}).items(), key=lambda x: x[1], reverse=True)[:5]:
             print(f"  {emo:12s}: {count:3d}")
+        
+        print(f"\nRefleksje autouważne: {stats['reflections']}")

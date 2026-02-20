@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-# explorer.py v8.1.0 - Direct Glob Targeting
+# explorer.py v8.2.0-Quantum - Direct Glob Targeting & Thermal Decoherence
 """
 Moduł eksploracji świata fizycznego.
+ZMIANA v8.2.0: Integracja z QuantumBridge. Temperatura procesora uderza
+bezpośrednio w fazy kwantowe jako Szum Termiczny (Dekoherencja).
 ZMIANA v8.1.0: Porzucono os.walk na rzecz glob.glob.
 Rozwiązuje problem ignorowania symlinków w /sys/class/.
 """
@@ -11,9 +13,17 @@ import glob
 import re
 import time
 import json
+import random
+import math
+import numpy as np
 
 # Kolory importowane z union_config.py (Single Source of Truth)
-from union_config import Colors
+try:
+    from union_config import Colors
+except ImportError:
+    class Colors:
+        RED = '\033[91m'; GREEN = '\033[92m'; YELLOW = '\033[93m'
+        CYAN = '\033[96m'; RESET = '\033[0m'
 
 class WorldExplorer:
     def __init__(self, aii_instance=None):
@@ -119,6 +129,8 @@ def read_sensor():
 
     def get_live_readings(self):
         readings = {}
+        max_temp = 0.0
+        
         for s_id, data in self.sensors.items():
             try:
                 scope = {}
@@ -126,7 +138,47 @@ def read_sensor():
                 val = scope['read_sensor']()
                 prefix = 'temp' if data['is_temperature'] else 'other'
                 readings[f"{prefix}_{s_id}"] = val
+                
+                # Szukamy najwyższej temperatury do kalkulacji fizyki
+                if data['is_temperature'] and val > max_temp:
+                    max_temp = val
             except: pass
+            
+        # ─────────────────────────────────────────────────────────────
+        # FIZYKA KWANTOWA: DEKOHERENCJA TERMICZNA
+        # ─────────────────────────────────────────────────────────────
+        # W rzeczywistości ciepło niszczy stany kwantowe. Symulujemy to 
+        # uderzając w fazy macierzy jeśli procesor się przegrzewa.
+        
+        if self.aii and hasattr(self.aii, 'quantum') and self.aii.quantum:
+            # Zakładamy, że powyżej 65°C zaczyna się drganie termiczne
+            if max_temp > 65.0:
+                excess_heat = max_temp - 65.0
+                
+                # Szum fazowy rośnie z temperaturą (max 0.4 radiana szumu)
+                noise_factor = min(0.4, excess_heat * 0.015)
+                
+                if noise_factor > 0.05:
+                    print(f"{Colors.RED}[EXPLORER] Gorączka sprzętowa ({max_temp:.1f}°C). Aplikuję dekoherencję fazową!{Colors.RESET}")
+                
+                for dim in self.aii.quantum.state.DIMENSIONS:
+                    if dim == 'vacuum': 
+                        continue # Pustki nie da się zdestabilizować
+                        
+                    amp = self.aii.quantum.state.amplitudes[dim]
+                    mag = abs(amp)
+                    phase = np.angle(amp)
+                    
+                    # Aplikujemy losowy szum fazowy proporcjonalny do ciepła
+                    thermal_noise = random.uniform(-noise_factor, noise_factor)
+                    new_phase = (phase + thermal_noise) % (2 * math.pi)
+                    
+                    self.aii.quantum.state.amplitudes[dim] = mag * np.exp(1j * new_phase)
+                    
+                # Stabilizujemy macierz po uderzeniu termicznym
+                self.aii.quantum.state.normalize()
+                self.aii.quantum.sync_to_aii()
+                
         return readings
 
     def save_discoveries(self):

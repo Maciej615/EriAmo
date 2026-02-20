@@ -49,18 +49,22 @@ class QuantumEmotionalState:
         'sadness', 'disgust', 'anger', 'anticipation',
         # Metaphysical 7
         'logic', 'knowledge', 'time', 'creation',
-        'being', 'space', 'chaos'
+        'being', 'space', 'chaos',
+        # Wewnętrzny wymiar QuantumBridge — energia rozpadów emocjonalnych.
+        # Obecny w DIMENSIONS aby emotional_interference nie rzucało KeyError.
+        # Niewidoczny dla AII: sync_to_aii pomija vacuum przy zapisie do context_vector.
+        'vacuum'
     ]
     
     def __init__(self):
-        """Initialize w równej superpozycji"""
-        # Każda emocja startuje z równą amplitudą
+        """Initialize w równej superpozycji (vacuum startuje od zera)"""
         n = len(self.DIMENSIONS)
-        uniform_amplitude = 1.0 / np.sqrt(n)
+        # Superpozycja bez vacuum — vacuum akumuluje energię dopiero przez rozpad
+        uniform_amplitude = 1.0 / np.sqrt(n - 1)
         
-        # Random fazy (individuality)
         self.amplitudes: Dict[str, complex] = {
-            dim: uniform_amplitude * np.exp(1j * np.random.uniform(0, 2*np.pi))
+            dim: (0.0 + 0j) if dim == 'vacuum'
+            else uniform_amplitude * np.exp(1j * np.random.uniform(0, 2*np.pi))
             for dim in self.DIMENSIONS
         }
         

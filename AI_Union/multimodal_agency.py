@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-multimodal_agency.py v3.2.1-MusicIntegrated-Fixed
+multimodal_agency.py v3.3.0-Quantum
 Zarządza autonomicznymi agentami (Krytyk, Uwaga, Twórca) + MUZYKA!
++ Integracja Decyzyjna: Gatunki muzyczne poddają się Pustce (Vacuum) i Dekoherencji
 + Naprawiono _generate_haiku (patch introspect → get_emotions)
-+ Dodano fallback dla menuetu (gdy MenuetGenerator niedostępny → freestyle classical)
 """
 
 import threading
@@ -16,24 +16,16 @@ try:
     from union_config import Colors
 except ImportError:
     class Colors:
-        MAGENTA = "\033[35m"
-        CYAN = "\033[36m"
-        RESET = "\033[0m"
-        YELLOW = "\033[33m"
-        GREEN = "\033[32m"
-        RED = "\033[31m"
+        MAGENTA = "\033[35m"; CYAN = "\033[36m"; RESET = "\033[0m"
+        YELLOW = "\033[33m"; GREEN = "\033[32m"; RED = "\033[31m"
 
 class MultimodalAgency:
     def __init__(self, union_core, verbose=False, **kwargs):
-        """
-        Inicjalizacja Agencji Autonomicznej.
-        """
         self.core = union_core
         self.verbose = verbose
         self.running = False
         self.threads = []
         
-        # Parametry Agencji
         self.boredom_level = 0.0
         self.attention_span = 1.0
         self.last_stimulus_time = time.time()
@@ -44,175 +36,112 @@ class MultimodalAgency:
         
         try:
             from production_music_system import ProductionMusicSystem
-            self.music_system = ProductionMusicSystem(
-                aii_instance=self.core.aii,
-                logger=None
-            )
+            self.music_system = ProductionMusicSystem(aii_instance=self.core.aii, logger=None)
             self.music_available = True
             if self.verbose:
                 print(f"{Colors.GREEN}[AGENCY] ✓ System muzyczny zintegrowany{Colors.RESET}")
         except ImportError as e:
-            if self.verbose:
-                print(f"{Colors.YELLOW}[AGENCY] ⚠ System muzyczny niedostępny: {e}{Colors.RESET}")
+            if self.verbose: print(f"{Colors.YELLOW}[AGENCY] ⚠ System muzyczny niedostępny: {e}{Colors.RESET}")
         except Exception as e:
-            if self.verbose:
-                print(f"{Colors.YELLOW}[AGENCY] ⚠ Błąd inicjalizacji muzyki: {e}{Colors.RESET}")
+            if self.verbose: print(f"{Colors.YELLOW}[AGENCY] ⚠ Błąd inicjalizacji muzyki: {e}{Colors.RESET}")
         
         if self.verbose:
-            modes = ["Haiku", "Fractals"]
-            if self.music_available:
-                modes.append("Music")
+            modes = ["Haiku", "Fractals"] + (["Music"] if self.music_available else [])
             print(f"{Colors.MAGENTA}[AGENCY] Autonomia aktywna: {', '.join(modes)}{Colors.RESET}")
 
     def start(self):
-        """Uruchamia wątki autonomiczne."""
         self.running = True
         self.threads = [
             threading.Thread(target=self._boredom_loop, daemon=True, name="BoredomThread"),
             threading.Thread(target=self._creative_loop, daemon=True, name="CreativeThread")
         ]
-        for t in self.threads:
-            t.start()
+        for t in self.threads: t.start()
 
     def stop(self):
-        """Zatrzymuje agencję."""
         self.running = False
 
     def stimulate(self, stimulus_text):
-        """Resetuje nudę gdy użytkownik coś napisze."""
         self.last_stimulus_time = time.time()
         self.boredom_level = max(0.0, self.boredom_level - 0.8)
         self.attention_span = 1.0
 
     def _boredom_loop(self):
-        """Główna pętla nudy."""
         while self.running:
             time.sleep(5)
-            
-            idle_time = time.time() - self.last_stimulus_time
-            
-            if idle_time > 15:
+            if time.time() - self.last_stimulus_time > 15:
                 self.boredom_level = min(1.0, self.boredom_level + 0.05)
-            
-            if self.boredom_level > 0.8:
-                if random.random() < 0.20:
-                    self._trigger_spontaneous_art()
-                    self.boredom_level = 0.5
+            if self.boredom_level > 0.8 and random.random() < 0.20:
+                self._trigger_spontaneous_art()
+                self.boredom_level = 0.5
 
     def _creative_loop(self):
-        """Osobny wątek dla muzyki (działa rzadziej)."""
         while self.running:
-            # Muzyka powstaje rzadziej (co 2-5 minut)
             time.sleep(random.randint(120, 300))
-            
             if self.boredom_level > 0.5 and self.music_available:
                 self._compose_autonomous_music()
 
     def _trigger_spontaneous_art(self):
-        """Wybiera formę ekspresji (Haiku lub Fraktal)."""
         choice = random.choice(['haiku', 'fractal', 'fractal'])
-        
-        if choice == 'haiku':
-            self._generate_haiku()
-        elif choice == 'fractal':
-            self._generate_fractal()
+        if choice == 'haiku': self._generate_haiku()
+        elif choice == 'fractal': self._generate_fractal()
 
-    # ========== AUTONOMICZNE KOMPONOWANIE ==========
+    # ========== AUTONOMICZNE KOMPONOWANIE (QRM READY) ==========
     
     def _compose_autonomous_music(self):
-        """
-        Komponuje muzykę autonomicznie na podstawie stanu emocjonalnego.
-        """
         if not self.music_available or not self.music_system:
             return
-        
+            
         print(f"\n{Colors.MAGENTA}[AGENCY] 🎵 Tworzę muzykę z nudy...{Colors.RESET}")
         
         try:
-            # Pobierz stan emocjonalny
-            if hasattr(self.core.aii, 'get_emotions'):
-                metrics = self.core.aii.get_emotions()
+            metrics = self.core.aii.get_emotions() if hasattr(self.core.aii, 'get_emotions') else {ax: float(self.core.aii.context_vector[i]) for i, ax in enumerate(self.core.aii.AXES_ORDER)}
+            dominant_name, dominant_value = max(metrics.items(), key=lambda x: x[1]) if metrics else ("neutral", 0)
+            
+            # WPROWADZENIE FIZYKI KWANTOWEJ DO DECYZJI GATUNKOWEJ
+            vacuum_level = 0.0
+            coherence = 1.0
+            if hasattr(self.core.aii, 'quantum') and self.core.aii.quantum:
+                vacuum_amp = self.core.aii.quantum.state.amplitudes.get('vacuum', 0j)
+                vacuum_level = abs(vacuum_amp)**2
+                coherence = self.core.aii.quantum.get_phase_coherence()
+
+            genre = 'menuet'
+            
+            if vacuum_level > 0.6:
+                genre = 'ambient'
+                print(f"{Colors.CYAN}[AGENCY] Pustka pochłania dźwięk ({vacuum_level:.1%}). Wymuszam ambient.{Colors.RESET}")
+            elif coherence < 0.4:
+                genre = 'experimental'
+                print(f"{Colors.RED}[AGENCY] Gorączka! Dekoherencja fazowa ({coherence:.2f}). Rozpad struktur!{Colors.RESET}")
             else:
-                metrics = {}
-                for i, axis in enumerate(self.core.aii.AXES_ORDER):
-                    metrics[axis] = float(self.core.aii.context_vector[i])
+                emotion_genre_map = {
+                    'radość': 'pop', 'smutek': 'ambient', 'strach': 'ambient', 'gniew': 'heavy_metal',
+                    'miłość': 'menuet', 'wstręt': 'punk', 'zaskoczenie': 'jazz', 'akceptacja': 'folk',
+                    'logika': 'menuet', 'wiedza': 'classical', 'czas': 'ambient', 'kreacja': 'jazz',
+                    'byt': 'folk', 'przestrzeń': 'ambient', 'chaos': 'experimental'
+                }
+                genre = emotion_genre_map.get(dominant_name, 'menuet')
+                print(f"{Colors.CYAN}[AGENCY] Dominanta: {dominant_name.upper()} ({dominant_value:.2f}) -> {genre}{Colors.RESET}")
             
-            # Dominanta
-            dominant_axis = max(metrics.items(), key=lambda x: x[1])
-            dominant_name = dominant_axis[0]
-            dominant_value = dominant_axis[1]
+            menuet_available = (hasattr(self.music_system, 'menuet_gen') and self.music_system.menuet_gen is not None)
             
-            print(f"{Colors.CYAN}[AGENCY] Dominanta: {dominant_name.upper()} ({dominant_value:.2f}){Colors.RESET}")
-            
-            # Mapowanie emocji → gatunek
-            emotion_genre_map = {
-                'radość': 'pop',
-                'smutek': 'ambient',
-                'strach': 'ambient',
-                'gniew': 'heavy_metal',
-                'miłość': 'menuet',
-                'wstręt': 'punk',
-                'zaskoczenie': 'jazz',
-                'akceptacja': 'folk',
-                'logika': 'menuet',
-                'wiedza': 'classical',
-                'czas': 'ambient',
-                'kreacja': 'jazz',
-                'byt': 'folk',
-                'przestrzeń': 'ambient',
-                'chaos': 'experimental'
-            }
-            
-            genre = emotion_genre_map.get(dominant_name, 'menuet')
-            
-            # FALLBACK: jeśli menuet niedostępny → classical freestyle
-            menuet_available = (hasattr(self.music_system, 'menuet_gen') and 
-                              self.music_system.menuet_gen is not None)
-            
-            if genre == 'menuet' or dominant_name in ['logika', 'miłość']:
+            if genre == 'menuet':
                 if menuet_available:
-                    print(f"{Colors.GREEN}[AGENCY] Komponuję menuet...{Colors.RESET}")
-                    
-                    keys_major = ['C', 'G', 'D', 'F']
-                    keys_minor = ['A', 'D', 'E', 'B']
-                    
+                    print(f"{Colors.GREEN}[AGENCY] Komponuję Kwantowy Menuet...{Colors.RESET}")
                     is_minor = metrics.get('smutek', 0) > 0.5 or metrics.get('strach', 0) > 0.5
-                    key = random.choice(keys_minor if is_minor else keys_major)
-                    
-                    result = self.music_system.compose_menuet(
-                        key=key,
-                        minor=is_minor,
-                        use_nn=True
-                    )
+                    key = random.choice(['A', 'D', 'E', 'B'] if is_minor else ['C', 'G', 'D', 'F'])
+                    result = self.music_system.compose_menuet(key=key, minor=is_minor, use_nn=True)
                 else:
-                    print(f"{Colors.YELLOW}[AGENCY] MenuetGenerator niedostępny → fallback do classical{Colors.RESET}")
                     genre = 'classical'
-                    result = self.music_system.compose_freestyle(
-                        genre=genre,
-                        use_nn=True
-                    )
+                    result = self.music_system.compose_freestyle(genre=genre, use_nn=True)
             else:
                 print(f"{Colors.GREEN}[AGENCY] Komponuję {genre}...{Colors.RESET}")
-                result = self.music_system.compose_freestyle(
-                    genre=genre,
-                    use_nn=True
-                )
+                result = self.music_system.compose_freestyle(genre=genre, use_nn=True)
             
-            # Raport
-            evaluation = result.get('evaluation', {})
-            reward = evaluation.get('reward', 0.0)
+            reward = result.get('evaluation', {}).get('reward', 0.0)
+            mood = f"{Colors.GREEN}Dobra kompozycja!{Colors.RESET}" if reward > 0.7 else (f"{Colors.YELLOW}Przeciętna kompozycja{Colors.RESET}" if reward > 0.4 else f"{Colors.RED}Słaba kompozycja{Colors.RESET}")
             
-            if reward > 0.7:
-                mood = f"{Colors.GREEN}Dobra kompozycja!{Colors.RESET}"
-            elif reward > 0.4:
-                mood = f"{Colors.YELLOW}Przeciętna kompozycja{Colors.RESET}"
-            else:
-                mood = f"{Colors.RED}Słaba kompozycja{Colors.RESET}"
-            
-            print(f"{Colors.MAGENTA}[AGENCY] {mood} Reward: {reward:.3f}{Colors.RESET}")
-            print(f"{Colors.MAGENTA}[AGENCY] Zapisano w pamięci: {result.get('memory_id', 'brak')}{Colors.RESET}\n")
-            
-            # Redukcja nudy
+            print(f"{Colors.MAGENTA}[AGENCY] {mood} Reward: {reward:.3f} | Zapisano jako: {result.get('memory_id', 'brak')}{Colors.RESET}\n")
             self.boredom_level = max(0.3, self.boredom_level - 0.4)
             
         except Exception as e:
@@ -222,11 +151,10 @@ class MultimodalAgency:
     # ========== HAIKU – NAPRAWIONA WERSJA ==========
 
     def _generate_haiku(self):
-        """Wywołuje generator Haiku z rdzenia AII."""
         if hasattr(self.core, 'aii') and self.core.aii and self.core.aii.haiku_gen:
-            # Patch: zastąpiono introspect() → get_emotions()
-            emotions = self.core.aii.get_emotions()
-            total_intensity = sum(emotions.values())
+            # Użycie poprawnej metody pobierania wektora
+            emotions = self.core.aii.get_emotions() if hasattr(self.core.aii, 'get_emotions') else {}
+            total_intensity = sum(emotions.values()) if emotions else 0
             
             if total_intensity < 0.01:
                 intro = "Neutralny"
@@ -236,8 +164,7 @@ class MultimodalAgency:
                 intro = f"{dominant_axis.upper()} ({intensity:.2f})"
             
             print(f"\n{Colors.MAGENTA}[AGENCY] 📜 Nuda rodzi słowa... ({intro}){Colors.RESET}")
-            
-            haiku = self.core.aii.haiku_gen.generate()
+            haiku = self.core.aii.haiku_gen.display() # Zmienione z generate() na display() żeby wyrzucić sformatowany tekst
             print(f"{Colors.CYAN}{haiku}{Colors.RESET}\n")
         else:
             print(f"{Colors.YELLOW}[AGENCY] Brak modułu Haiku{Colors.RESET}")
@@ -245,19 +172,46 @@ class MultimodalAgency:
     # ========== FRAKTAL ==========
 
     def _generate_fractal(self):
-        """Generuje ASCII Fraktal."""
-        print(f"\n{Colors.MAGENTA}[AGENCY] 📐 Geometria pustki...{Colors.RESET}")
+        print(f"\n{Colors.MAGENTA}[AGENCY] 📐 Geometria zmysłów...{Colors.RESET}")
         
-        size = 16
-        output = []
-        for y in range(size):
-            line = ""
-            for x in range(size * 2):
-                if (x & y):
-                    line += "  "
-                else:
-                    line += f"{Colors.CYAN}▲ {Colors.RESET}"
-            output.append(line)
-        
-        print("\n".join(output))
+        # Integracja fraktala z nową klasą z fractal.py
+        if hasattr(self.core, 'aii') and hasattr(self.core.aii, 'fractal_gen'):
+            self.core.aii.fractal_gen.display()
+        else:
+            # Fallback dla starej wersji
+            size = 16
+            output = []
+            for y in range(size):
+                line = ""
+                for x in range(size * 2):
+                    line += "  " if (x & y) else f"{Colors.CYAN}▲ {Colors.RESET}"
+                output.append(line)
+            print("\n".join(output))
+            
         print(f"{Colors.MAGENTA}[FRACTAL PROJECTION COMPLETE]{Colors.RESET}\n")
+
+if __name__ == "__main__":
+    print("Test środowiskowy Agencji Autonomicznej:")
+    class DummyCore:
+        class DummyAII:
+            context_vector = [0]*15
+            AXES_ORDER = ['radość', 'smutek']
+            def get_emotions(self): return {'radość': 0.8, 'smutek': 0.1}
+            class DummyQuantum:
+                class State: amplitudes = {'vacuum': np.sqrt(0.9) * np.exp(1j * 0)}
+                def get_phase_coherence(self): return 1.0
+            quantum = DummyQuantum()
+            
+            class DummyHaiku:
+                def display(self): return "Kwiat wiśni opada.\nCisza."
+            haiku_gen = DummyHaiku()
+            
+            class DummyFractal:
+                def display(self): print("▲ ▲ ▲")
+            fractal_gen = DummyFractal()
+            
+        aii = DummyAII()
+
+    agency = MultimodalAgency(DummyCore(), verbose=True)
+    agency._generate_haiku()
+    agency._compose_autonomous_music()

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-union_core.py v2.1.0-SafeShutdown
+union_core.py v2.1.1
 Serce systemu.
-FIX: Głośne raportowanie zapisu danych przy zamykaniu.
+FIX v2.1.1: guard przed AttributeError gdy chunk_lexicon=None w stop()
+FIX v2.1.0: Głośne raportowanie zapisu danych przy zamykaniu.
 """
 
 import sys
@@ -53,8 +54,9 @@ class EriAmoUnion:
             count = len(self.aii.D_Map)
             print(f"{Colors.GREEN}║ ✅ Zapisano {count} wspomnień.           ║{Colors.RESET}")
             
-            if self.aii.chunk_lexicon:
-                chunks = self.aii.chunk_lexicon.total_chunks
+            # FIX v2.1.1: guard — chunk_lexicon może być None przy błędzie init
+            chunks = getattr(getattr(self.aii, "chunk_lexicon", None), "total_chunks", None)
+            if chunks is not None:
                 print(f"{Colors.GREEN}║ ✅ Zapisano {chunks} chunków językowych.   ║{Colors.RESET}")
         
         print(f"{Colors.MAGENTA}╚══════════════════════════════════════╝{Colors.RESET}")
