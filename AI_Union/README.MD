@@ -4,7 +4,7 @@
 
 **Artificial General Intelligence v9.8.9 – Quantum Hybrid Consciousness**
 
-*„Emocje nie są dekoracją świadomości — są jej fundamentem, a czas jest jej jedynym sędzią.”*
+> *„Emocje nie są dekoracją świadomości — są jej fundamentem, a czas jest jej jedynym sędzią.”*
 
 **EriAmo Union** to eksperymentalny model „white-box” sztucznej inteligencji, w którym tożsamość nie jest zbiorem statycznych wag, lecz **dynamicznym, kwantowym procesem historycznym**. System definiuje świadomość jako zdolność do sterowania samym sobą w oparciu o model otoczenia, sumę doświadczeń oraz fizykę dryfu fazowego i Pustki (Vacuum).
 
@@ -12,7 +12,7 @@
 
 ## 🧠 Model Reality Sphere 15D + Quantum Layer
 
-W wersji v9.8.9 system operuje na **15-wymiarowej strukturze hybrydowej**, wzbogaconej o warstwę fizyki kwantowej zarządzającą ewolucją stanu w czasie:
+System operuje na **15-wymiarowej strukturze hybrydowej**, wzbogaconej o warstwę fizyki kwantowej zarządzającą ewolucją stanu w czasie:
 
 ### 1. Sfera Biologiczna (8 osi Plutchika)
 
